@@ -621,28 +621,30 @@
                 Wiffle Ball Game</h1>
         </div>
         <div data-role="content">
-			<p>
-				Batter: <span id="batter"></span>
-				Pitcher: <span id="pitcher"></span>
-			</p>
-			<p>
-				Balls: <span id="balls"></span>
-				Strikes: <span id="strikes"></span>
-				Outs: <span id="outs"></span>
-				Inning: <span id="inning"></span>
-			</p>
-			<p>
-				1st: <span id="first"></span>
-				2nd: <span id="second"></span>
-				3rd: <span id="third"></span>
-			</p>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Batter:</strong> <span id="batter"></span></div>
+				<div class="ui-block-b"><strong>Pitcher:</strong> <span id="pitcher"></span></div>
+			</div>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Balls:</strong> <span id="balls"></span></div>
+				<div class="ui-block-b"><strong>1st:</strong> <span id="first"></span></div>
+			</div>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Strikes:</strong> <span id="strikes"></span></div>
+				<div class="ui-block-b"><strong>2nd:</strong> <span id="second"></span></div>
+			</div>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Outs:</strong> <span id="outs"></span></div>
+				<div class="ui-block-b"><strong>3rd:</strong> <span id="third"></span></div>
+			</div>
+			<p><strong>Inning:</strong> <span id="inning"></span></p>
             <ul data-role="listview">
                 <li data-role="list-divider" style="display:none;" id="gameover">Game Over!</li>
                 <li data-role="list-divider">Pitch</li>
-                <li><a href="#game" data-pitch="ball">Ball</a></li>
-                <li><a href="#game" data-pitch="swing">Swing and miss</a></li>
-                <li><a href="#game" data-pitch="foul">Foul Ball</a></li>
-                <li><a href="#game" data-pitch="called">Called strike</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="ball">Ball</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="swing">Swing and miss</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="foul">Foul Ball</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="called">Called strike</a></li>
                 <li data-role="list-divider">In play</li>
                 <li>
 					Ground ball
@@ -709,8 +711,8 @@
 						<li><a href="#game">Cancel</a></li>
 					</ul></li>
                 <li data-role="list-divider" id="other">Other</li>
-                <li id="undoli"><a href="#game" id="undo">Undo</a></li>
-                <li id="redoli"><a href="#game" id="redo">Redo</a></li>
+                <li id="undoli" data-icon="false"><a href="#game" id="undo">Undo</a></li>
+                <li id="redoli" data-icon="false"><a href="#game" id="redo">Redo</a></li>
 				<!-- not implemented yet
                 <li><a href="#">Change fielder</a></li>
                 <li><a href="#">Change batter</a></li>
