@@ -1,88 +1,726 @@
 <!DOCTYPE html>
+<!-- NOTE: this is just one huge HTML doc so that we can easily store it and access it locally on our phones.  Otherwise, it wouldn't be much use in a "office down" emergency. -->
 <html>
 <head>
-  <meta charset='utf-8'>
+    <title>Wiffle Ball</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0/jquery.mobile-1.0.min.css" />
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.4.min.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/mobile/1.0/jquery.mobile-1.0.min.js"></script>
+    <style>
+        .ui-li-desc
+        {
+            white-space: normal;
+        }
+    </style>
+  <script type="text/javascript">
+	var BALLS_FOR_WALK = 4;
+	var STRIKES_FOR_K = 3;
+	var TWO_STRIKE_FOULS = -1;
+	var OUTS_PER_INNING = 3;
+	var INNINGS_PER_GAME = 6;
+	
+	
+	function getScore(game,team)
+	{
+		var score = 0;
+		for(var i=0; i<game.halfinnings.length; i++)
+		{
+			if(game.halfinnings[i].teambatting.name==team.name)
+			{
+				for(var j=0; j<game.halfinnings[i].atbats.length; j++)
+				{
+					score+=game.halfinnings[i].atbats[j].runsScored;
+				}
+			}
+		}
+		return score;
+	}
+	
+	function Game (type) {
+		this.team1 = new Team();
+		this.team2 = new Team();
+		
+		this.halfinnings = [];
+		
+		
+	};
+	function Base(type){
+		this.number = 0;
+		this.player = null;
+	};
+	function Team(type){
+		this.name = "";
+		this.players = [];
+		this.currentbatter = -1;
+		this.currentpitcher = -1;
+	};
+	function Player(type){
+		this.name = "";
+	};
+	function HalfInning(type){
+		this.teamFielding = null;
+		this.teamBatting = null;
+		this.number = 1;
+		this.top = true;
+		this.currentouts = 0;
+		this.atbats = [];
+	};
+	function AtBat(type){
+		this.pitcher = null;
+		this.batter = null;
+		this.fielder = null;
+		this.pitches = [];
+		this.runsScored = 0;
+		this.currentstrikes = 0;
+		this.currentballs = 0;
+		this.currentfouls = 0;
+		this.bases = null;
+	};
+	
+	var currentGame;
+	var currentGameIndex;
+	var games;
+	
+	var undos = [];
+	var redos  = [];
+	
+	$(function(){
+		games = getGames();
+		$("#home").bind("pageshow",function() { 
+			bindGames();
+		});
+		bindGames();
+		
+		// grab and use the 'subpage navigation value' for current game, if any
+		// couldn't find out how to do this directly in jqmobile
+		var gameregex = /.*\#game\&game(\d*)/ig;
+		var matches = gameregex.exec(window.location.href);
+		if(matches!=null && matches.length>1)
+		{
+			currentGameIndex = parseInt(matches[1]);
+			currentGame = games[currentGameIndex];
+			undos = [];
+			redos = [];
+			undos[0] = JSON.stringify(currentGame);
+			bindGame();
+		}
+		
+		$("#game").bind("pageshow",function() { 
+			bindGame();
+		});
+		
+		$("ul li a[data-pitch]").click(function(){
+			processPitch($(this).attr("data-pitch"));
+		});
+		
+		$("#undo").click(function(){
+			undo();
+		});
+		
+		$("#redo").click(function(){
+			redo();
+		});
+		
+		$("#newgameform").submit(function(){
+			currentGame = new Game();
+			currentGame.team1.name = $("#team1").val();
+			currentGame.team2.name = $("#team2").val();
+			for(var i=1; i<=4; i++)
+			{
+				if($("#player"+i).val()!="")
+				{
+					currentGame.team1.players[currentGame.team1.players.length] = new Player();
+					currentGame.team1.players[currentGame.team1.players.length - 1].name = $("#player"+i).val();
+				}
+				if($("#player"+i+"_2").val()!="")
+				{
+					currentGame.team2.players[currentGame.team2.players.length] = new Player();
+					currentGame.team2.players[currentGame.team2.players.length - 1].name = $("#player"+i+"_2").val();
+				}
+			}
+			nextAtBat();
+			
+			currentGameIndex = games.length;
+			games[currentGameIndex] = currentGame;
+			undos = [];
+			redos = [];
+			undos[0] = JSON.stringify(currentGame);
+			saveGames(games);
+			
+			$.mobile.changePage("#game&game"+(games.length-1));
+			return false;
+		});
+	});
+	
+	function bindGames()
+	{
+		$("#home ul li:gt(0)").remove();
+		for(var i=0; i<games.length; i++)
+		{
+			$("#home ul").append("<li data-game='"+i+"'><a href='#game&game"+i+"'>"+games[i].team2.name+" at "+games[i].team1.name+"</a></li>");
+		}
+		
+		$("#home ul li:gt(0)").click(
+			function()
+			{ 
+				currentGameIndex = parseInt($(this).attr("data-game"));
+				currentGame = games[currentGameIndex];
+				undos = [];
+				redos = [];
+				undos[0] = JSON.stringify(currentGame);
+			}
+		)
+		.swipe(
+			function()
+			{
+				if(confirm("delete this game?"))
+				{
+					games.remove(parseInt($(this).attr("data-game")));
+					saveGames(games);
+					bindGames();
+				}
+			}
+		);
+		try
+		{ // might not be previously init'd
+			$("#home ul").listview("refresh");
+		}
+		catch(exc){}
+		
+	}
+	
+	function bindGame()
+	{
+		$("#game h1").text(currentGame.team2.name + "(" + getScore(currentGame,currentGame.team2) + ")" +
+			" at " + currentGame.team1.name + "(" + getScore(currentGame,currentGame.team1) + ")");
+		
+		var atbat = getCurrentAtBat();
+		var halfinning = getCurrentHalfInning();
+		$("#batter").text(atbat.batter.name);
+		$("#pitcher").text(atbat.pitcher.name);
+		$("#balls").text(atbat.currentballs);
+		$("#strikes").text(atbat.currentstrikes);
+		$("#outs").text(halfinning.currentouts);
+		$("#inning").text(((halfinning.top)?"top of ":"bottom of ") + halfinning.number);
+		if(atbat.bases==null)
+		{
+			atbat.bases=new Array();
+			for(var i=0;i<4; i++)
+			{
+				atbat.bases[i] = new Base();
+				atbat.bases[i].number = i+1;
+			}
+		}
+		if(atbat.bases[0].player==null)
+			$("#first").text("X");
+		else
+			$("#first").text(atbat.bases[0].player.name);
+		if(atbat.bases[1].player==null)
+			$("#second").text("X");
+		else
+			$("#second").text(atbat.bases[1].player.name);
+		if(atbat.bases[2].player==null)
+			$("#third").text("X");
+		else
+			$("#third").text(atbat.bases[2].player.name);
+			
+		
+		if(undos.length<=1)
+			$("#undoli").hide();
+		else
+			$("#undoli").show();
+			
+		if(redos.length==0)
+			$("#redoli").hide();
+		else
+			$("#redoli").show();
+		
+		if($("#undoli:visible,#redoli:visible").length>0)
+			$("#other").show();
+		else
+			$("#other").hide();
+		
+		/*
+		if(currentGame.halfinnings.length%2 == 0  && currentgame.halfinnings.length/2 >= INNINGS_PER_GAME
+			&& getScore(currentGame,currentGame.team1) != getScore(currentGame,currentGame.team2) )
+		{ // game over!
+			$("li:visible:not(#other,#undoli,#redoli,#gameover)").hide();
+			$("#gameover").show();
+		}
+		else
+		{
+			$("li:visible:not(#other,#undoli,#redoli,#gameover)").show();
+			$("#gameover").hide();
+		}
+		*/
+	}
+	
+	function processPitch(pitchCode)
+	{
+		var vals = pitchCode.split("-");
+		
+		var atbat = getCurrentAtBat();
+		atbat.pitches[atbat.pitches.length] = pitchCode;
+		
+		var newbases = null;
+		
+		if(vals.length==1)
+		{ //not in play
+			if(vals[0]=="swing" || vals[0]=="called")
+			{
+				atbat.currentstrikes++;
+				if(atbat.currentstrikes==STRIKES_FOR_K && STRIKES_FOR_K>0)
+				{//strikeout
+					batterOut();
+					nextAtBat();
+				}
+			}
+			else if(vals[0]=="foul")
+			{
+				if(atbat.currentstrikes<STRIKES_FOR_K-1 )
+				{
+					atbat.currentstrikes++;
+				}
+				else
+				{
+					atbat.currentfouls++;
+					if(atbat.currentfouls>TWO_STRIKE_FOULS && TWO_STRIKE_FOULS>0)
+					{
+						//foul out
+						batterOut();
+						nextAtBat();
+					}
+				}
+			}
+			else //ball
+			{
+				atbat.currentballs++;
+				if(atbat.currentballs==BALLS_FOR_WALK)
+				{//walk
+					newbases = advanceRunners(1,false);
+					newbases[0].player = atbat.batter;
+					nextAtBat(newbases);
+				}
+			}
+		}
+		else
+		{
+			if(vals[0]=="single")
+			{
+				newbases = advanceRunners(1);
+				newbases[0].player = atbat.batter;
+			}
+			else if(vals[0]=="double")
+			{
+				newbases = advanceRunners(2);
+				newbases[1].player = atbat.batter;
+			}
+			else if(vals[0]=="triple")
+			{
+				newbases = advanceRunners(3);
+				newbases[2].player = atbat.batter;
+			}
+			else if(vals[0]=="homer")
+			{
+				newbases = advanceRunners(4);	
+				atbat.runsScored++;
+			}
+			else if(vals[0]=="out")
+			{
+				batterOut();
+			}
+			else if(vals[0]=="error")
+			{
+				newbases = advanceRunners(1,false);	
+				newbases[0].player = atbat.batter;
+			}
+			else if(vals[0]=="dp")
+			{
+				newbases = atbat.bases.clone();
+				if(vals[2]=="failed")
+				{
+					newbases = advanceRunners(1,true,1);
+					batterOut();
+				}
+				else
+				{
+					newbases[0].player = null;
+					batterOut(true);
+				}
+			}
+			else if(vals[0]=="sac")
+			{
+				if(vals[2]=="failed")
+				{
+					for(var i=newbases.length-1; i>=0; i--)
+					{
+						if(newbases[i].player!=null) //remove furthest runner
+						{
+							newbases[i].player = null;
+							break;
+						}
+					}
+					newbases = advanceRunners(1,true,2);
+					batterOut(true);
+				}
+				else
+				{
+					newbases = advanceRunners(1,true,1);
+					batterOut();
+				}
+			}
+			nextAtBat(newbases);
+		}
+		saveGames(games);
+		bindGame();
+	}
 
-  <title>thinginab/jquery-mobile-wiffle-ball @ GitHub</title>
+	function batterOut(doubleplay)
+	{
+		if(doubleplay==null)
+			doubleplay=false;
+			
+		var halfinning = getCurrentHalfInning();
+		halfinning.currentouts++;
+		if(doubleplay)
+			halfinning.currentouts++;
 
-  <style type="text/css">
-    body {
-      margin-top: 1.0em;
-      background-color: #804361;
-      font-family: Helvetica, Arial, FreeSans, san-serif;
-      color: #ffffff;
-    }
-    #container {
-      margin: 0 auto;
-      width: 700px;
-    }
-    h1 { font-size: 3.8em; color: #7fbc9e; margin-bottom: 3px; }
-    h1 .small { font-size: 0.4em; }
-    h1 a { text-decoration: none }
-    h2 { font-size: 1.5em; color: #7fbc9e; }
-    h3 { text-align: center; color: #7fbc9e; }
-    a { color: #7fbc9e; }
-    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
-    .download { float: right; }
-    pre { background: #000; color: #fff; padding: 15px;}
-    hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
-    .footer { text-align:center; padding-top:30px; font-style: italic; }
-  </style>
+	}
+	
+	function nextAtBat(bases)
+	{
+		var halfinning = null;
+		
+		if(currentGame.halfinnings.length>0)
+			halfinning = getCurrentHalfInning();
+		
+		if(currentGame.halfinnings.length==0 || halfinning.currentouts>=OUTS_PER_INNING)
+		{
+			//next half inning
+			currentGame.halfinnings[currentGame.halfinnings.length] = new HalfInning();
+			halfinning = getCurrentHalfInning();
+			if(currentGame.halfinnings.length%2==1)
+			{
+				halfinning.teamfielding = currentGame.team1;
+				halfinning.teambatting = currentGame.team2;
+				halfinning.top = true;
+			}
+			else
+			{
+				halfinning.teamfielding = currentGame.team2;
+				halfinning.teambatting = currentGame.team1;
+				halfinning.top = false;
+			}
+			halfinning.number = Math.round(currentGame.halfinnings.length/2);
+			getCurrentTeamFielding().currentpitcher = ((getCurrentTeamFielding().currentpitcher+1)%getCurrentTeamFielding().players.length);
+		}
+		if(bases==null && halfinning.atbats.length>0)
+			bases = getCurrentAtBat().bases;
+		else if(bases==null)
+		{
+			bases = new Array();
+			for(var i=0;i<4; i++)
+			{
+				bases[i] = new Base();
+				bases[i].number = i+1;
+			}
+		}
+		//next batter
+		halfinning.atbats[halfinning.atbats.length] = new AtBat();
+		getCurrentAtBat().pitcher = getCurrentTeamFielding().players[getCurrentTeamFielding().currentpitcher];
+
+		getCurrentTeamBatting().currentbatter = ((getCurrentTeamBatting().currentbatter+1)%getCurrentTeamBatting().players.length);
+		getCurrentAtBat().batter = getCurrentTeamBatting().players[getCurrentTeamBatting().currentbatter];
+		getCurrentAtBat().bases = bases;
+	}
+	
+	function advanceRunners(count, pushAll, outsInPlay)
+	{
+		if(pushAll==null)
+			pushAll=true;
+		if(outsInPlay==null)
+			outsInPlay = 0;
+			
+		var atbat = getCurrentAtBat();
+		var halfInning = getCurrentHalfInning();
+		var newbases = atbat.bases.clone();
+		
+		for(var i=newbases.length-1; i>=0; i--)
+		{
+			if(newbases[i].player!=null)
+			{
+				var pushthis = pushAll;
+				if(!pushAll)
+				{
+					var filled = true;
+					for(var j=i; j>=0; j--)
+					{
+						if(newbases[j].player==null)
+						{
+							filled=false;
+							break;
+						}
+					}
+					pushthis=filled;
+				}
+				if(pushthis)
+				{
+					if(newbases.length-1>i+count)
+					{//advance player
+						newbases[i+count].player = newbases[i].player;
+					}
+					else
+					{// score
+						if(outsInPlay+halfInning.currentouts<OUTS_PER_INNING)
+							atbat.runsScored++;
+					}
+					newbases[i].player = null;
+				}
+			}
+		}
+		return newbases;
+	}
+	
+	function getCurrentAtBat()
+	{
+		var hi = getCurrentHalfInning();
+		return hi.atbats[hi.atbats.length-1];
+	}
+	
+	
+	function getCurrentHalfInning()
+	{
+		return currentGame.halfinnings[currentGame.halfinnings.length-1];
+	}
+	
+	function getCurrentTeamFielding()
+	{
+		return getCurrentHalfInning().teamfielding;
+	}
+	function getCurrentTeamBatting()
+	{
+		return getCurrentHalfInning().teambatting;
+	}
+	function getGames()
+	{
+		if(localStorage["games"]==null)
+			return new Array();
+		return JSON.parse(localStorage["games"]);
+	}
+	function saveGames(games)
+	{
+		undos[undos.length] = JSON.stringify(currentGame);
+		localStorage["games"] = JSON.stringify(games);
+	}
+	function undo()
+	{
+		if(undos.length-2>=0)
+		{
+			redos[redos.length] = JSON.stringify(currentGame);
+			currentGame = JSON.parse(undos[undos.length-2]); // last is current state, skip one more back
+			games[currentGameIndex] = currentGame;
+			saveGames(games);
+			undos.remove(undos.length-2, undos.length-1); // need to remove the last two - the savegames above just added one.
+			bindGame();
+		}
+	}
+	function redo()
+	{
+		if(redos.length>0)
+		{
+			currentGame = JSON.parse(redos[redos.length-1]);
+			games[currentGameIndex] = currentGame;
+			saveGames(games);
+			redos.remove(redos.length-1);
+			bindGame();
+		}
+	}
+	
+	// Array Remove - By John Resig (MIT Licensed)
+	Array.prototype.remove = function(from, to) {
+	  var rest = this.slice((to || from) + 1 || this.length);
+	  this.length = from < 0 ? this.length + from : from;
+	  return this.push.apply(this, rest);
+	};
+	// Array clone - http://www.xenoveritas.org/comment/1689
+	Array.prototype.clone = function() { return this.slice(0); }
+	
+	</script>
 </head>
-
 <body>
-  <a href="https://github.com/thinginab/jquery-mobile-wiffle-ball"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
-
-  <div id="container">
-
-    <div class="download">
-      <a href="https://github.com/thinginab/jquery-mobile-wiffle-ball/zipball/master">
-        <img border="0" width="90" src="https://github.com/images/modules/download/zip.png"></a>
-      <a href="https://github.com/thinginab/jquery-mobile-wiffle-ball/tarball/master">
-        <img border="0" width="90" src="https://github.com/images/modules/download/tar.png"></a>
+	<div data-role="page" id="home" data-add-back-btn="true">
+        <div data-role="header">
+            <h1>
+                Games</h1>
+        </div>
+        <div data-role="content">
+            <ul data-role="listview">
+				<li><a href="#newgame">[Start New Game]</a></li>
+			</ul>
+		</div>
+	</div>
+	<div data-role="page" id="newgame" data-add-back-btn="true">
+        <div data-role="header">
+            <h1>
+                Start New Game</h1>
+        </div>
+        <div data-role="content">
+			<form id="newgameform">
+				<div data-role="fieldcontain">
+					<label for="team1" class="ui-hidden-accessible">Home Team:</label>
+					<input type="text" name="team1" id="team1" value="" placeholder="Team 1"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player1" class="ui-hidden-accessible">Player 1:</label>
+					<input type="text" name="player1" id="player1" value="" placeholder="Player 1"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player2" class="ui-hidden-accessible">Player 2</label>
+					<input type="text" name="player2" id="player2" value="" placeholder="Player 2"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player3" class="ui-hidden-accessible">Player 3:</label>
+					<input type="text" name="player3" id="player3" value="" placeholder="Player 3"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player4" class="ui-hidden-accessible">Player 4:</label>
+					<input type="text" name="player4" id="player4" value="" placeholder="Player 4"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="team2" class="ui-hidden-accessible">Away Team:</label>
+					<input type="text" name="team2" id="team2" value="" placeholder="Team 2"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player1_2" class="ui-hidden-accessible">Player 1:</label>
+					<input type="text" name="player1_2" id="player1_2" value="" placeholder="Player 1"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player2_2" class="ui-hidden-accessible">Player 2</label>
+					<input type="text" name="player2_2" id="player2_2" value="" placeholder="Player 2"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player3_2" class="ui-hidden-accessible">Player 3:</label>
+					<input type="text" name="player3_2" id="player3_2" value="" placeholder="Player 3"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player4_2" class="ui-hidden-accessible">Player 4:</label>
+					<input type="text" name="player4_2" id="player4_2" value="" placeholder="Player 4"/>
+				</div>
+				<fieldset class="ui-grid-a">
+					<div class="ui-block-a"><a href="#home" data-role="button" data-theme="d">Cancel</a></div>
+					<div class="ui-block-b"><button type="submit"  data-theme="a">Submit</button></div>
+				</fieldset>
+				<input type="hidden" name="createaction" />
+			</form>
+		</div>
+	</div>
+    <div data-role="page" id="game" data-add-back-btn="true">
+        <div data-role="header">
+            <h1>
+                Wiffle Ball Game</h1>
+        </div>
+        <div data-role="content">
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Batter:</strong> <span id="batter"></span></div>
+				<div class="ui-block-b"><strong>Pitcher:</strong> <span id="pitcher"></span></div>
+			</div>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Balls:</strong> <span id="balls"></span></div>
+				<div class="ui-block-b"><strong>1st:</strong> <span id="first"></span></div>
+			</div>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Strikes:</strong> <span id="strikes"></span></div>
+				<div class="ui-block-b"><strong>2nd:</strong> <span id="second"></span></div>
+			</div>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Outs:</strong> <span id="outs"></span></div>
+				<div class="ui-block-b"><strong>3rd:</strong> <span id="third"></span></div>
+			</div>
+			<p><strong>Inning:</strong> <span id="inning"></span></p>
+            <ul data-role="listview">
+                <li data-role="list-divider" style="display:none;" id="gameover">Game Over!</li>
+                <li data-role="list-divider">Pitch</li>
+                <li data-icon="false"><a href="#game" data-pitch="ball">Ball</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="swing">Swing and miss</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="foul">Foul Ball</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="called">Called strike</a></li>
+                <li data-role="list-divider">In play</li>
+                <li>
+					Ground ball
+					<ul>
+						<li data-role="list-divider">Safe</li>
+						<li><a href="#game" data-pitch="single-grounder">Hit</a></li>
+						<li><a href="#game" data-pitch="error-grounder">Error</a></li>
+						<li data-role="list-divider">Out</li>
+						<li><a href="#game" data-pitch="out-grounder-routine">Routine</a></li>
+						<li><a href="#game" data-pitch="out-grounder-robbed">Robbed</a></li>
+						<li data-role="list-divider">Double play</li>
+						<li><a href="#game" data-pitch="dp-grounder-routine">Routine</a></li>
+						<li><a href="#game" data-pitch="dp-grounder-robbed">Robbed</a></li>
+						<li><a href="#game" data-pitch="dp-grounder-failed">Failed DP</a></li>
+						<li data-role="list-divider">Other</li>
+						<li><a href="#game">Cancel</a></li>
+					</ul>
+				</li>
+                <li>
+					Fly ball
+					<ul>
+						<li data-role="list-divider">Safe</li>
+						<li><a href="#game" data-pitch="double-fly">Hit (Double)</a></li>
+						<li><a href="#game" data-pitch="triple-fly">Hit (Triple)</a></li>
+						<li><a href="#game" data-pitch="homer-fly">Hit (Home Run)</a></li>
+						<li><a href="#game" data-pitch="error-fly">Error</a></li>
+						<li data-role="list-divider">Out</li>
+						<li><a href="#game" data-pitch="out-fly-ceiling">Ceiling</a></li>
+						<li><a href="#game" data-pitch="out-fly-caught">Caught</a></li>
+						<li><a href="#game" data-pitch="out-fly-robbed">Robbed (off wall)</a></li>
+						<li data-role="list-divider">Sac Fly</li>
+						<li><a href="#game" data-pitch="sac-fly-ceiling">Ceiling</a></li>
+						<li><a href="#game" data-pitch="sac-fly-caught">Caught</a></li>
+						<li><a href="#game" data-pitch="sac-fly-robbed">Robbed (off wall)</a></li>
+						<li><a href="#game" data-pitch="sac-fly-failed">Failed Sac Fly (2 outs - furthest runner)</a></li>
+						<li data-role="list-divider">Double play</li>
+						<li><a href="#game" data-pitch="dp-fly-caught">Caught</a></li>
+						<li><a href="#game" data-pitch="dp-fly-robbed">Robbed (off wall)</a></li>
+						<li><a href="#game" data-pitch="dp-fly-failed">Failed DP (1 out - runners advance)</a></li>
+						<li data-role="list-divider">Other</li>
+						<li><a href="#game">Cancel</a></li>
+					</ul>
+				</li>
+                <li>
+					Line drive
+					<ul>
+						<li data-role="list-divider">Safe</li>
+						<li><a href="#game" data-pitch="double-linedrive">Hit (Double)</a></li>
+						<li><a href="#game" data-pitch="triple-linedrive">Hit (Triple)</a></li>
+						<li><a href="#game" data-pitch="homer-linedrive">Hit (Home Run)</a></li>
+						<li><a href="#game" data-pitch="single-linedrive">Knocked down (Single)</a></li>
+						<li data-role="list-divider">Out</li>
+						<li><a href="#game" data-pitch="out-linedrive-caught">Caught</a></li>
+						<li><a href="#game" data-pitch="out-linedrive-robbed">Robbed (off wall)</a></li>
+						<li data-role="list-divider">Sac Fly</li>
+						<li><a href="#game" data-pitch="sac-linedrive-caught">Caught</a></li>
+						<li><a href="#game" data-pitch="sac-linedrive-robbed">Robbed (off wall)</a></li>
+						<li><a href="#game" data-pitch="sac-linedrive-failed">Failed Sac Fly (2 outs - furthest runner)</a></li>
+						<li data-role="list-divider">Double play</li>
+						<li><a href="#game" data-pitch="dp-linedrive-caught">Caught</a></li>
+						<li><a href="#game" data-pitch="dp-linedrive-robbed">Robbed (off wall)</a></li>
+						<li><a href="#game" data-pitch="dp-linedrive-failed">Failed DP (1 out - runners advance)</a></li>
+						<li data-role="list-divider">Other</li>
+						<li><a href="#game">Cancel</a></li>
+					</ul></li>
+                <li data-role="list-divider" id="other">Other</li>
+                <li id="undoli" data-icon="false"><a href="#game" id="undo">Undo</a></li>
+                <li id="redoli" data-icon="false"><a href="#game" id="redo">Redo</a></li>
+				<!-- not implemented yet
+                <li><a href="#">Change fielder</a></li>
+                <li><a href="#">Change batter</a></li>
+                <li><a href="#">Change pitcher</a></li>
+                <li><a href="#">Game over (time)</a></li>
+				-->
+            </ul>
+        </div>
     </div>
-
-    <h1><a href="https://github.com/thinginab/jquery-mobile-wiffle-ball">jquery-mobile-wiffle-ball</a>
-      <span class="small">by <a href="https://github.com/thinginab">thinginab</a></span></h1>
-
-    <div class="description">
-      
-    </div>
-
-    
-
-    
-
-    
-
-    
-
-    
-      <h2>Authors</h2>
-      <p>unknown (luked@ws060.LANIT.COM)<br/>Luke (thinginab+github@gmail.com)<br/>      </p>
-    
-
-    
-      <h2>Contact</h2>
-      <p> (thinginab+github@gmail.com)<br/>      </p>
-    
-
-    <h2>Download</h2>
-    <p>
-      You can download this project in either
-      <a href="https://github.com/thinginab/jquery-mobile-wiffle-ball/zipball/master">zip</a> or
-      <a href="https://github.com/thinginab/jquery-mobile-wiffle-ball/tarball/master">tar formats.
-    </p>
-    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-      by running:
-      <pre>$ git clone git://github.com/thinginab/jquery-mobile-wiffle-ball</pre>
-    </p>
-
-    <div class="footer">
-      get the source code on GitHub : <a href="https://github.com/thinginab/jquery-mobile-wiffle-ball">thinginab/jquery-mobile-wiffle-ball</a>
-    </div>
-
-  </div>
-
 </body>
 </html>
