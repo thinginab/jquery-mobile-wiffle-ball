@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns		= "http://www.w3.org/ns/widgets"
+	xmlns:gap	= "http://phonegap.com/ns/1.0"
+	id		= "bigleague"
+	version 	= "1.1.3"
+	versionCode = "113">
+
+	<name>Big League</name>
+
+	<description>
+		You are ready for the Big Leagues!
+		
+		Big League helps you score all of your real life backyard and sandlot baseball games.  After you are done scoring, you get sortable stats - both standard and sabermetric for both batters and pitchers.
+	</description>
+
+	<author href="http://wiffletracker.appspot.com"
+		email="comowiffleball@gmail.com">
+		Luke Daffron, assisted by Nick Benas (nick@bigleaguewiffleball.com) and Jared Verrillo  (jared@bigleaguewiffleball.com)
+	</author>
+	
+	<icon src="images/blwb_icon.png" default="true" />
+	<!-- iOS requires specific dimensions for icons; classic iPhone screens, Retina
+		displays, and iPad screens respectively -->
+	<icon src="images/blwb_icon-57.png" width="57" height="57"/>
+	<icon src="images/blwb_icon-72.png" width="72" height="72"/>
+	<icon src="images/blwb_icon-114.png" width="114" height="114"/>
+	<icon src="images/blwb_icon-144.png" width="114" height="144"/>
+
+	<!-- Android requires specific dimensions; ldpi, mdpi, and hdpi respectively -->
+	<icon src="images/blwb_icon-36.png" width="36" height="36"/>
+	<icon src="images/blwb_icon-48.png" width="48" height="48"/>
+	<icon src="images/blwb_icon-72.png" width="72" height="72"/>
+	
+	<!-- iOS requires specific dimensions for different devices; classic iPhone
+  screens, Retina displays, and iPad screens -->
+  
+	<gap:splash src="images/blwb_splash-320x480.png" />
+	<gap:splash src="images/blwb_splash-640x960.png" width="640" height="960"/>
+	<gap:splash src="images/blwb_splash-768x1004.png" width="768" height="1004"/>
+	<gap:splash src="images/blwb_splash-1024x748.png" width="1024" height="748"/>
+	<gap:splash src="images/blwb_splash-1536x2008.png" width="1536" height="2008"/>
+	<gap:splash src="images/blwb_splash-2048x1496.png" width="1024" height="748"/>
+
+
+	<preference name="target-device" value="universal" />
+	<preference name="fullscreen" value="true" />
+	<preference name="webviewbounce" value="false" />
+	<preference name="uiRevision" value="2" />
+	
+	
+	<preference name="permissions" value="none"/>
+</widget>

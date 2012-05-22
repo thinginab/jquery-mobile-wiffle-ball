@@ -1,0 +1,224 @@
+body {background-color:#ede3c0;}
+
+#home{ background: #ede3c0 url('../images/blwb_banner.png') no-repeat top left !important;}
+
+#home>div.ui-content{padding-top:75px;}
+#home .ui-header{display:none;}
+
+
+* {
+    -webkit-touch-callout: none;
+}
+
+.disabled *
+{
+	opacity: .3;
+}
+
+/* css loading icon rather than animated gif */
+.ui-icon-loading {
+    background: url(http://code.jquery.com/mobile/1.1.0-rc.1/images/ajax-loader.png);
+    background-size: 46px 46px;
+    width:46px;
+    height:46px;
+    -webkit-transform: rotate(360deg);
+    -webkit-animation-name: spin;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count:  infinite;
+    -webkit-animation-timing-function: linear;
+}
+@-webkit-keyframes spin {
+    from {-webkit-transform: rotate(0deg);}
+    to {-webkit-transform: rotate(360deg);}
+}
+
+#config label
+{
+	width: 384px;
+}
+#config input.ui-input-text
+{
+	width:90px;
+}
+#config fieldset.ui-grid-a
+{
+	max-width:545px;
+}
+.ui-field-contain label.ui-slider
+{
+	vertical-align:middle;
+	width:inherit;
+}
+div.ui-slider-switch.ui-slider-mini
+{
+	height:38px;
+}
+div.ui-slider-switch.ui-slider-mini .ui-slider-handle
+{
+	margin-top:5px;
+}
+
+table thead th { 
+	background: #81948A;
+	color: white;
+	font-weight: bold;
+	text-shadow: 0 1px 1px #444;
+}
+table tbody td, table tbody th , table thead td{ background:#fff;}
+
+table.sortable th
+{
+	cursor:pointer;
+	background-image:url(themes/images/sortable.gif);
+	background-repeat: no-repeat;
+	background-position: center right;
+	padding-right:17px;
+}
+table thead th.headerSortDown, table thead th.headerSortUp { 
+	background-color: #812f18;
+}
+#narrowscore td, #narrowscore th
+{
+	padding:.2em .4em;
+}
+table th.spacer, table td.spacer
+{
+	background:transparent;
+	border:none;
+}
+table.grid
+{
+	background-color:#81948A;
+}
+table.pitcher, table.batter
+{
+	cursor:pointer;
+}
+.ui-field-contain label.ui-input-text
+{
+	width:auto;
+	vertical-align:middle;
+}
+#innings
+{
+	width:3.5em;
+}
+#narrowscore table, #widescore table
+{
+	margin:0 auto;
+}
+#widescore.small table
+{
+	font-size:.75em/* for iPhone landscape */
+}
+.ui-btn-hover-a a, .ui-btn-up-a a
+{color:#fff !important;}
+
+table.sortable thead th.headerSortDown:hover, table.sortable thead th.headerSortUp:hover ,table.sortable thead th:hover
+{
+	background-color:#D6522C;
+}
+table.sortable th.headerSortDown
+{
+	background-image:url(themes/images/sort-desc.gif);
+}
+table.sortable th.headerSortUp
+{
+	background-image:url(themes/images/sort-asc.gif);
+}
+.ui-li-desc
+{
+	white-space: normal;
+}
+.grid td, .grid th
+{
+	margin:0;
+}
+#widescore div, #narrowscore div
+{
+	text-align:center;
+}
+#widescore_bottom .ui-grid-b .ui-block-a
+{
+	width:66.666%;
+	overflow:auto;
+}
+#gameboxscore
+{
+    margin-left:auto; 
+    margin-right:auto;
+	text-align:left;
+}
+#widescore_top  table
+{
+    margin-left:auto; 
+    margin-right:auto;
+	position:relative;
+	width:90%;
+}
+#pitches a span.ui-btn-inner
+{
+	padding:20px 0;
+}
+#home a span.ui-btn-inner
+{
+	padding:20px 0;
+}
+#home a
+{
+	margin:30px 0;
+	font-size:1.5em;
+}
+/* Overthrow CSS:
+   Enable overflow: auto on elements with overthrow class when html element has overthrow-enabled class too */
+.overthrow-enabled .overthrow {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ui-grid-a>.ui-block-a, .ui-grid-a>.ui-block-b {
+width: 50%;
+}
+p
+{
+	clear:both;
+	font-size:4px;
+	line-height:4px;
+}
+#narrowscore .count
+{
+	font-size:.7em;
+}
+#narrowscore .scores, #narrowscore .inning
+{
+	font-size:1.4em;
+}
+
+.clear
+{
+	clear:both;
+}
+
+.ui-dialog-contain .ui-header .ui-title, .ui-footer .ui-title
+{
+margin: .6em 5% .8em;
+}
+.baserunner
+{
+	min-height:1em;
+	border:1px solid #755C2C;
+	padding:.5em;
+}
+.baserunner li
+{
+margin-left:5px;
+list-style-type:none;
+}
+.baserunner-active 
+{
+background-color:#755C2C;
+}
+.baserunner-hover 
+{
+background-color:#FFEECD;
+}

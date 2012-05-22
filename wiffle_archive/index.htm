@@ -1,0 +1,1945 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Wiffle Ball</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.16/themes/cupertino/jquery-ui.css" />
+    <link rel="stylesheet" href="http://ajax.aspnetcdn.com/ajax/jquery.mobile/1.0.1/jquery.mobile-1.0.1.min.css" />
+    <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.17/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jquery.mobile/1.0.1/jquery.mobile-1.0.1.min.js"></script>
+	<script type="text/javascript" src="http://cdn.ucb.org.br/Scripts/tablesorter/jquery.tablesorter.min.js"></script>
+	<style>
+        .ui-li-desc
+        {
+            white-space: normal;
+        }
+		.grid td, .grid th
+		{
+			border:1px solid #ccc;
+			margin:0;
+		}
+    </style>
+	<script type="text/javascript">
+	
+	var oldgame =  null;
+		
+	function recreateGame()
+	{
+		for(var hi=0; hi<oldgame.halfinnings.length; hi++)
+		{
+			for(var ab=0; ab<oldgame.halfinnings[hi].atbats.length; ab++)
+			{
+				for(var p=0; p<oldgame.halfinnings[hi].atbats[ab].pitches.length; p++)
+				{
+				//	currentGame.halfinnings[hi].atbats[ab].batter = JSON.parse(JSON.stringify(oldgame.halfinnings[hi].atbats[ab].batter));
+					processPitch(oldgame.halfinnings[hi].atbats[ab].pitches[p], oldgame.halfinnings[hi].atbats[ab].fielder);
+				}
+			}
+		}
+	}
+	
+	
+	var BALLS_FOR_WALK = 4;
+	var STRIKES_FOR_K = 3;
+	var TWO_STRIKE_FOULS = -1;
+	var OUTS_PER_INNING = 3;
+	var INNINGS_PER_GAME = 6;
+	var POST_URL = "http://ws060.lanit.com/wiffle/home/savegame";
+	var LOAD_URL = "http://ws060.lanit.com/wiffle/home/loadgames";
+	
+	function getTeamScore(game,team)
+	{
+		var score = 0;
+		for(var i=0; i<game.halfinnings.length; i++)
+		{
+			if(game.halfinnings[i].teambatting.name==team.name)
+			{
+				score+=getHalfInningScore(game.halfinnings[i]);
+			}
+		}
+		return score;
+	}
+	
+	function getHalfInningScore(halfinning)
+	{
+		var score = 0;
+		for(var j=0; j<halfinning.atbats.length; j++)
+		{
+			score+=halfinning.atbats[j].runsScored;
+		}
+		return score;
+	}
+	
+	
+	var hitregex = /.*((single)|(double)|(triple)|(homer)).*/ig;
+	var walkregex = /ball.*/ig;
+	var errorregex = /.*((error)|(dp.*failed)).*/ig;
+	var atbatregex = /.*^((?!((ball.*)|(error))).)*$.*/ig;
+	var strikeoutregex = /(called)|(swing)/ig;
+	var plateappearanceregex = /.*/ig;
+	var singleregex = /.*single.*/ig;
+	var doubleregex = /.*double.*/ig;
+	var tripleregex = /.*triple.*/ig;
+	var homerregex = /.*homer.*/ig;
+	
+	var pitchregex = /.*/ig;
+	var ballregex = /ball.*/ig;
+	var swingregex = /.*^((?!((ball.*)|(called))).)*$.*/ig;
+	
+	
+	function getTeamOutcomes(game,team,regex)
+	{
+		var outcomes = 0;
+		for(var i=0; i<game.halfinnings.length; i++)
+		{
+			if(game.halfinnings[i].teambatting.name==team.name)
+			{
+				outcomes+=getHalfInningOutcomes(game.halfinnings[i],regex);
+			}
+		}
+		return outcomes;
+	}
+	function getPlayerInnings(games,player,isbatter)
+	{
+		if(games.halfinnings!=null)
+		{
+			var game = games;
+			games = new Array();
+			games[games.length] = game;
+		}
+		var innings = 0;
+		for(var i=0; i<games.length; i++)
+		{
+			var game = games[i];
+			for(var j=0; j<game.halfinnings.length; j++)
+			{
+				var hi = game.halfinnings[j];
+				for(var k=0; k<hi.atbats.length; k++)
+				{
+					if(isbatter && hi.atbats[k].batter.name==player 
+						&& hi.atbats[k].pitches.length>0)
+					{
+						innings++;
+						break;
+					}
+					else if(!isbatter && hi.atbats[k].pitcher.name==player
+						&& hi.atbats[k].pitches.length>0)
+					{
+						innings++;
+						break;
+					}
+				}
+			}
+		}
+		return innings;
+	}
+	function getTeamInnings(game,team, isbatting)
+	{
+		var innings = 0;
+		for(var i=0; i<game.halfinnings.length; i++)
+		{
+			if(isbatting && game.halfinnings[i].teambatting.name==team.name
+				&& game.halfinnings[i].atbats[0].pitches.length>0)
+			{
+				innings++;
+			}
+			else if(!isbatting && game.halfinnings[i].teampitching.name==team.name
+				&& game.halfinnings[i].atbats[0].pitches.length>0)
+			{
+				innings++;
+			}
+		}
+		return innings;
+	}
+	function getPlayerGames(games,player,isbatter)
+	{
+		if(games.halfinnings!=null)
+		{
+			var game = games;
+			games = new Array();
+			games[games.length] = game;
+		}
+		var gamecount = 0;
+		
+		for(var i=0; i<games.length; i++)
+		{
+			for(var j=0; j<games[i].team1.players.length; j++)
+			{
+				if(games[i].team1.players[j].name==player)
+					gamecount++;
+			}
+			for(var j=0; j<games[i].team2.players.length; j++)
+			{
+				if(games[i].team2.players[j].name==player)
+					gamecount++;
+			}
+				
+		}
+		return gamecount;
+	}
+	function getTeamGames(game,team)
+	{
+		var innings = 0;
+		if(game.team1.name==team.name || game.team2.name==team.name)
+			return 1;
+		return 0;
+	}
+	function getPlayerPitches(games,player,regex,isbatter)
+	{
+		if(games.halfinnings!=null)
+		{
+			var game = games;
+			games = new Array();
+			games[games.length] = game;
+		}
+		
+		var pitches = 0;
+		
+		for(var i=0; i<games.length; i++)
+		{
+			var game = games[i];
+			for(var j=0; j<game.halfinnings.length; j++)
+			{
+				var hi = game.halfinnings[j];
+				for(var k=0; k<hi.atbats.length; k++)
+				{
+					var ab = hi.atbats[k];
+					for(var l=0; l<ab.pitches.length; l++)
+					{
+						var pitch = ab.pitches[l];
+						
+						if(isbatter && ab.batter.name==player &&
+							regex.test(pitch) )
+						{
+							pitches++;
+						}
+						else if(!isbatter && ab.pitcher.name==player &&
+							regex.test(pitch) )
+						{
+							pitches++;
+						}
+						regex.lastIndex=0;
+					}
+				}
+			}
+		}
+		
+		return pitches;
+	}
+	function getTeamPitches(games,team,regex,isbatting)
+	{
+		if(games.halfinnings!=null)
+		{
+			var game = games;
+			games = new Array();
+			games[games.length] = game;
+		}
+		
+		var pitches = 0;
+		
+		for(var i=0; i<games.length; i++)
+		{
+			var game = games[i];
+			for(var j=0; j<game.halfinnings.length; j++)
+			{
+				var hi = game.halfinnings[j];
+				
+				if((isbatting && hi.teambatting.name==team.name) ||
+				(!isbatting && hi.teampitching.name==team.name))
+				{
+					for(var k=0; k<hi.atbats.length; k++)
+					{
+						var ab = hi.atbats[k];
+						for(var l=0; l<ab.pitches.length; l++)
+						{
+							var pitch = ab.pitches[l];
+							
+							if(regex.test(pitch) )
+							{
+								pitches++;
+							}
+							regex.lastIndex=0;
+						}
+					}
+				}
+			}
+		}
+		
+		return pitches;
+	}
+	function getPlayerOutcomes(games,player,regex,isbatter)
+	{
+		if(games.halfinnings!=null)
+		{
+			var game = games;
+			games = new Array();
+			games[games.length] = game;
+		}
+		
+		var outcomes = 0;
+		
+		for(var k=0; k<games.length; k++)
+		{
+			var game = games[k];
+			for(var i=0; i<game.halfinnings.length; i++)
+			{
+				for(var j=0; j<game.halfinnings[i].atbats.length; j++)
+				{
+					var outcome = game.halfinnings[i].atbats[j].pitches[game.halfinnings[i].atbats[j].pitches.length-1];
+					
+					if(isbatter && game.halfinnings[i].atbats[j].batter.name==player &&
+						regex.test(outcome) )
+					{
+						outcomes++;
+					}
+					else if(!isbatter && game.halfinnings[i].atbats[j].pitcher.name==player &&
+						regex.test(outcome) )
+					{
+						outcomes++;
+					}
+					regex.lastIndex=0;
+				}
+			}
+		}
+		return outcomes;
+	}
+	function getTeamOutcomesScore(game,team,regex)
+	{
+		var outcomes = 0;
+		
+		for(var i=0; i<game.halfinnings.length; i++)
+		{
+			if(game.halfinnings[i].teambatting.name==team.name)
+			{
+				outcomes+=getHalfInningOutcomesScore(game.halfinnings[i],regex);
+			}
+		}
+		
+		return outcomes;
+	}
+	function getPlayerOutcomesScore(games,player,regex, isbatter)
+	{
+		if(games.halfinnings!=null)
+		{
+			var game = games;
+			games = new Array();
+			games[games.length] = game;
+		}
+		
+		var outcomes = 0;
+		for(var k=0; k<games.length; k++)
+		{
+			var game = games[k];
+			for(var i=0; i<game.halfinnings.length; i++)
+			{
+				for(var j=0; j<game.halfinnings[i].atbats.length; j++)
+				{
+					var outcome = game.halfinnings[i].atbats[j].pitches[game.halfinnings[i].atbats[j].pitches.length-1];
+					if(isbatter && game.halfinnings[i].atbats[j].batter.name==player &&
+						regex.test(outcome) )
+					{
+						outcomes+=game.halfinnings[i].atbats[j].runsScored;
+					}
+					else if(!isbatter && game.halfinnings[i].atbats[j].pitcher.name==player &&
+						regex.test(outcome) )
+					{
+						outcomes+=game.halfinnings[i].atbats[j].runsScored;
+					}
+					regex.lastIndex=0;
+				}
+			}
+		}
+		return outcomes;
+	}
+	
+	function getPlayerRunsScored(games,player,isbatter)
+	{
+		if(games.halfinnings!=null)
+		{
+			var game = games;
+			games = new Array();
+			games[games.length] = game;
+		}
+		
+		var runs = 0;
+		for(var k=0; k<games.length; k++)
+		{
+			var game = games[k];
+			for(var i=0; i<game.halfinnings.length; i++)
+			{
+				for(var j=0; j<game.halfinnings[i].atbats.length; j++)
+				{
+					if(!isbatter && game.halfinnings[i].atbats[j].pitcher.name==player)
+					{
+						runs+=game.halfinnings[i].atbats[j].runsScored;
+					}
+					else if(isbatter)
+					{
+						if(game.halfinnings[i].atbats[j].runnersScored!=null)
+						{
+							for(var l=0; l<game.halfinnings[i].atbats[j].runnersScored.length; l++)
+							{
+								if(game.halfinnings[i].atbats[j].runnersScored[l].name==player)
+									runs++;
+							}
+						}
+					}
+					
+				}
+			}
+		}
+		return runs;
+	}
+	
+	function getHalfInningOutcomes(halfinning, regex)
+	{
+		var outcomes = 0;
+		for(var j=0; j<halfinning.atbats.length; j++)
+		{
+			var outcome = halfinning.atbats[j].pitches[halfinning.atbats[j].pitches.length-1];
+			
+			if(regex.test(outcome))
+				outcomes++;
+				
+			regex.lastIndex=0;
+		}
+		return outcomes;
+	}
+	
+	function getHalfInningOutcomesScore(halfinning, regex)
+	{
+		var outcomes = 0;
+		for(var j=0; j<halfinning.atbats.length; j++)
+		{
+			var outcome = halfinning.atbats[j].pitches[halfinning.atbats[j].pitches.length-1];
+			
+			if(regex.test(outcome))
+				outcomes+=halfinning.atbats[j].runsScored;
+				
+			regex.lastIndex=0;
+		}
+		return outcomes;
+	}
+	
+	function Game (type) {
+		this.team1 = new Team();
+		this.team2 = new Team();
+		
+		this.halfinnings = [];
+		
+		
+	};
+	function Base(type){
+		this.number = 0;
+		this.player = null;
+	};
+	function Team(type){
+		this.name = "";
+		this.players = [];
+		this.currentbatter = -1;
+		this.currentpitcher = -1;
+	};
+	
+	function Player(type){
+		this.name = "";
+	};
+	function HalfInning(type){
+		this.teamFielding = null;
+		this.teamBatting = null;
+		this.number = 1;
+		this.top = true;
+		this.currentouts = 0;
+		this.atbats = [];
+	};
+	function AtBat(type){
+		this.pitcher = null;
+		this.pitcherIndex = 0;
+		this.batter = null;
+		this.batterIndex = 0;
+		this.fielder = null;
+		this.pitches = [];
+		this.runsScored = 0;
+		this.runnersScored = [];
+		this.currentstrikes = 0;
+		this.currentballs = 0;
+		this.currentfouls = 0;
+		this.bases = null;
+	};
+	
+	var currentGame;
+	var currentGameIndex;
+	var currentSeasonIndex=-1;
+	var games;
+	var savedGames;
+	
+	var undos = [];
+	var redos  = [];
+
+	var clk = null;
+	
+	$(function () {
+	    games = getGames();
+	    getSavedGames();
+		
+		
+		
+	    $("#home").bind("pageshow", function () {
+	        bindGames();
+	    });
+	    bindGames();
+
+		$("#newgame").live("pageshow",function(){
+			bindNewGame();
+		});
+		bindNewGame();
+		
+	    // grab and use the 'subpage navigation value' for current game, if any
+	    // couldn't find out how to do this directly in jqmobile
+	    var gameregex = /.*\#game(stats)?\&game(\d*)(\&season(\d*))?/ig;
+	    var matches = gameregex.exec(window.location.href);
+	    if (matches != null && matches.length > 1) {
+	        currentGameIndex = parseInt(matches[2]);
+			
+			if(matches.length>4 && matches[4]!=null)
+				currentSeasonIndex = parseInt(matches[4]);
+			else
+				currentSeasonIndex = -1;
+				
+			loadCurrentGame();
+	    }
+
+	    // grab and use the 'subpage navigation value' for current season, if any
+	    // couldn't find out how to do this directly in jqmobile
+	    var seasonregex = /.*\#seasonstats?\&season(\d*)/ig;
+		matches = seasonregex.exec(window.location.href);
+	    if (matches != null && matches.length > 1) {
+	        currentSeasonIndex = parseInt(matches[1]);
+	        bindSeasonStats();
+	    }
+		
+	    $("#game").bind("pageshow", function () {
+	        bindGame();
+			setupFielders();
+	    });
+	    $("#gamestats").bind("pageshow", function () {
+	        bindGameStats();
+	    });
+	    $("#seasonstats").bind("pageshow", function () {
+	        bindSeasonStats();
+	    });
+
+		$("ul li").live("click",function(){
+			try
+			{
+				if(clk==null)
+					clk = new Audio("http://dl.dropbox.com/u/49830381/click.mp3");
+				clk.play();
+			}
+			catch(exc){}
+		});
+	    $("ul li a[data-pitch]").live("click",function () {
+			
+	        processPitch($(this).attr("data-pitch"), $(this).attr("data-fielded-by"));
+			
+			var $this = $(this);
+			setTimeout(function(){
+				var $li = $this.parents("li:first").removeClass("ui-btn-active");
+			},300);
+			
+	    });
+
+	    $("#undo").click(function () {
+	        undo();
+	    });
+
+	    $("#redo").click(function () {
+	        redo();
+	    });
+
+	    $("#post").click(function () {
+	        post();
+	    });
+		$("#output").click(function(){
+			output();
+		});
+
+	    $("#newgameform").submit(function () {
+	        currentGame = new Game();
+	        currentGame.team1.name = $("#team1").val();
+	        currentGame.team2.name = $("#team2").val();
+	        for (var i = 1; i <= 4; i++) {
+	            if ($("#player" + i).val() != "") {
+	                currentGame.team1.players[currentGame.team1.players.length] = new Player();
+	                currentGame.team1.players[currentGame.team1.players.length - 1].name = $("#player" + i).val();
+	            }
+	            if ($("#player" + i + "_2").val() != "") {
+	                currentGame.team2.players[currentGame.team2.players.length] = new Player();
+	                currentGame.team2.players[currentGame.team2.players.length - 1].name = $("#player" + i + "_2").val();
+	            }
+	        }
+	        nextAtBat();
+
+	        currentGameIndex = games.length;
+			currentSeasonIndex = -1;
+	        games[currentGameIndex] = currentGame;
+	        undos = [];
+	        redos = [];
+	        undos[0] = JSON.stringify(currentGame);
+	        saveGames(games);
+
+	        $.mobile.changePage("#game&game" + (games.length - 1));
+	        return false;
+	    });
+	});
+	
+	function loadCurrentGame()
+	{
+		if(!savedgamesloaded)
+		{
+			setTimeout(loadCurrentGame,100);
+			return;
+		}
+		if(currentSeasonIndex==-1 )
+			currentGame = games[currentGameIndex];
+		else
+			currentGame = savedGames[currentSeasonIndex].games[currentGameIndex];
+			
+		undos = [];
+		redos = [];
+		undos[0] = JSON.stringify(currentGame);
+		bindGame();
+		bindGameStats();
+		setupFielders();
+	}
+	function bindNewGame()
+	{
+		if(!savedgamesloaded)
+		{
+			setTimeout(bindNewGame,100);
+			return;
+		}
+		var teams = [];
+		var teamIds = [];
+		for(var i=games.length-1; i>=games.length; i--) //most recent first
+		{
+			if(games[i].team1!=null && $.inArray(games[i].team1.getId(),teamIds)==-1)
+			{
+				teams[teams.length] = games[i].team1;
+				teamIds[teamIds.length] = games[i].team1.getId();
+			}
+			if(games[i].team2!=null && $.inArray(games[i].team2.getId(),teamIds)==-1)
+			{
+				teams[teams.length] = games[i].team2;
+				teamIds[teamIds.length] = games[i].team2.getId();
+			}
+		}
+		if(savedGames!=null)
+		{
+			for(var i=0; i<savedGames.length; i++)
+			{
+				for(var j=0; j<savedGames[i].games.length; j++)
+				{
+					if(savedGames[i].games[j].team1!=null && $.inArray(savedGames[i].games[j].team1.getId(),teamIds)==-1)
+					{
+						teams[teams.length] = savedGames[i].games[j].team1;
+						teamIds[teamIds.length] = savedGames[i].games[j].team1.getId();
+					}
+					if(savedGames[i].games[j].team2!=null && $.inArray(savedGames[i].games[j].team2.getId(),teamIds)==-1)
+					{
+						teams[teams.length] = savedGames[i].games[j].team2;
+						teamIds[teamIds.length] = savedGames[i].games[j].team2.getId();
+					}
+				}
+			}
+		}
+		for(var i=0; i<teams.length; i++)
+		{
+			teams[i].value = teams[i].name;
+		}
+		for(var i=1; i<=2; i++)
+		{ // for some reason #team1, #team2 didn't work
+			$( "#team"+i ).autocomplete({
+				minLength: 0,
+				source: teams,
+				focus: function( event, ui ) {
+					$( this ).val( ui.item.name );
+					for(var i=0; i<ui.item.players.length; i++)
+					{
+						var postfix = "";
+						if($(this).is("#team2"))
+							postfix = "_2";
+						$("#player"+(i+1)+postfix).val(ui.item.players[i].name);
+					}
+					return false;
+				},
+				select: function( event, ui ) {
+					$( this).val( ui.item.name );
+					for(var i=0; i<ui.item.players.length; i++)
+					{
+						var postfix = "";
+						if($(this).is("#team2"))
+							postfix = "_2";
+						$("#player"+(i+1)+postfix).val(ui.item.players[i].name);
+					}
+					return false;
+				}
+			})
+			.data( "autocomplete" )._renderItem = function( ul, item ) {
+				var players = "";
+				for(var i=0; i<item.players.length; i++)
+				{
+					if(players!="")
+						players+=", ";
+					players += item.players[i].name;
+				}
+				return $( "<li></li>" )
+					.data( "item.autocomplete", item )
+					.append( "<a>" + item.name + "<br /><span style='font-style:italic;font-size:.8em;padding-left:4px;'>" + players + "</span></a>" )
+					.appendTo( ul );
+			};
+		}
+	}
+	function bindGames()
+	{
+		if(!savedgamesloaded)
+		{
+			setTimeout(bindGames,100);
+			return;
+		}
+		$("#home ul li:gt(0)").remove();
+        
+		if(games.length>0)
+		{
+			$("#home ul").append("<li data-role='list-divider'>Edit Game</li>");
+			for(var i=0; i<games.length; i++)
+			{
+				$("#home ul").append("<li data-game='"+i+"' data-removable='true'><a href='#game&game"+i+"'>"+games[i].team2.name+" at "+games[i].team1.name+"</a></li>");
+			}
+			$("#home ul").append("<li data-role='list-divider'>Local Game Stats</li>");
+			for(var i=0; i<games.length; i++)
+			{
+				$("#home ul").append("<li data-game='"+i+"'><a href='#gamestats&game"+i+"'>"+games[i].team2.name+" at "+games[i].team1.name+"</a></li>");
+			}
+		}
+		if(savedGames!=null && savedGames.length>0)
+		{
+			$("#home ul").append("<li data-role='list-divider'>Saved Stats</li>");
+			
+			for(var i=0; i<savedGames.length; i++)
+			{
+				var season = savedGames[i];
+				
+				$("#home ul").append("<li data-season='"+i+"'><a href='#seasonstats&season"+i+"'><strong>Full "+season.name+" Stats</strong></a></li>");
+				
+				for(var j=0; j<season.games.length; j++)
+				{
+					$("#home ul").append("<li data-game='"+j+"' data-season='"+i+"'><a href='#gamestats&game"+j+"&season"+i+"'>--- "+season.games[j].team2.name+" at "+season.games[j].team1.name+"</a></li>");
+				}
+			}
+			/*
+			$("#home ul").append("<li data-role='list-divider'>Recreate Game</li>");
+			for(var i=0; i<savedGames.length; i++)
+			{
+				var season = savedGames[i];
+				
+				for(var j=0; j<season.games.length; j++)
+				{
+					$("#home ul").append("<li data-game='"+j+"' data-season='"+i+"' data-recreate='true'><a href='#game&recreate=true&game"+j+"&season"+i+"'>"+season.games[j].team2.name+" at "+season.games[j].team1.name+"</a></li>");
+				}
+			}
+			*/
+			
+		}
+        
+		
+		$("#home ul li:gt(0)")
+		.filter(":not([data-role=list-divider])")
+		.click(
+			function()
+			{ 
+				currentGameIndex = parseInt($(this).attr("data-game"));
+				if($(this).is("[data-season]"))
+				{
+					currentSeasonIndex = parseInt($(this).attr("data-season"));
+				}
+				else
+				{
+					currentSeasonIndex = -1;
+				}
+				if(currentSeasonIndex == -1)
+				{
+					currentGame = games[currentGameIndex];
+				}
+				else
+				{
+					currentGame = savedGames[currentSeasonIndex].games[currentGameIndex];
+				}
+				
+				undos = [];
+				redos = [];
+				undos[0] = JSON.stringify(currentGame);
+				
+				
+				if($(this).is("[data-recreate=true]"))
+				{
+					oldgame = currentGame;
+					currentGame = new Game();
+					currentGame.team1.name = oldgame.team1.name;
+					currentGame.team2.name = oldgame.team2.name;
+					for (var i = 0; i <oldgame.team1.players.length; i++) {
+						currentGame.team1.players[currentGame.team1.players.length] = new Player();
+						currentGame.team1.players[currentGame.team1.players.length - 1].name = oldgame.team1.players[i].name;
+					}
+					for (var i = 0; i <oldgame.team2.players.length; i++) {
+						currentGame.team2.players[currentGame.team2.players.length] = new Player();
+						currentGame.team2.players[currentGame.team2.players.length - 1].name = oldgame.team2.players[i].name;
+					}
+					nextAtBat();
+
+					currentGameIndex = games.length;
+					currentSeasonIndex = -1;
+					games[currentGameIndex] = currentGame;
+					undos = [];
+					redos = [];
+					undos[0] = JSON.stringify(currentGame);
+					recreateGame();
+					saveGames(games);
+
+					$.mobile.changePage("#game&game" + (games.length - 1));
+				}
+			}
+		)
+		.filter("[data-removable]")
+		.swipe(
+			function()
+			{
+				if(confirm("delete this game?"))
+				{
+					games.remove(parseInt($(this).attr("data-game")));
+					saveGames(games);
+					bindGames();
+				}
+			}
+		);
+		try
+		{ // might not be previously init'd
+			$("#home ul").listview("refresh");
+		}
+		catch(exc){}
+		
+	}
+	
+	function bindGame()
+	{
+		if(!savedgamesloaded)
+		{
+			setTimeout(bindGame,100);
+			return;
+		}
+		$("#game h1").text(currentGame.team2.name + "(" + getTeamScore(currentGame,currentGame.team2) + ")" +
+			" at " + currentGame.team1.name + "(" + getTeamScore(currentGame,currentGame.team1) + ")");
+		
+		var atbat = getCurrentAtBat();
+		var halfinning = getCurrentHalfInning();
+		$("#batter").text(atbat.batter.name);
+		$("#pitcher").text(atbat.pitcher.name);
+		$("#balls").text(atbat.currentballs);
+		$("#strikes").text(atbat.currentstrikes);
+		$("#outs").text(halfinning.currentouts);
+		$("#inning").text(((halfinning.top)?"top of ":"bottom of ") + halfinning.number);
+		if(atbat.bases==null)
+		{
+			atbat.bases=new Array();
+			for(var i=0;i<4; i++)
+			{
+				atbat.bases[i] = new Base();
+				atbat.bases[i].number = i+1;
+			}
+		}
+		if(atbat.bases[0].player==null)
+			$("#first").text("X");
+		else
+			$("#first").text(atbat.bases[0].player.name);
+		if(atbat.bases[1].player==null)
+			$("#second").text("X");
+		else
+			$("#second").text(atbat.bases[1].player.name);
+		if(atbat.bases[2].player==null)
+			$("#third").text("X");
+		else
+			$("#third").text(atbat.bases[2].player.name);
+			
+		
+		if(undos.length<=1)
+			$("#undoli").hide();
+		else
+			$("#undoli").show();
+			
+		if(redos.length==0)
+			$("#redoli").hide();
+		else
+			$("#redoli").show();
+		
+		if(atbat.bases[0].player!=null && halfinning.currentouts<2)
+			$(".dp").show();
+		else
+			$(".dp").hide();
+		
+		if((atbat.bases[0].player!=null || atbat.bases[1].player!=null || atbat.bases[2].player!=null) && halfinning.currentouts<2)
+			$(".sac").show();
+		else
+			$(".sac").hide();
+			
+		/*
+		if(currentGame.halfinnings.length%2 == 0  && currentgame.halfinnings.length/2 >= INNINGS_PER_GAME
+			&& getTeamScore(currentGame,currentGame.team1) != getTeamScore(currentGame,currentGame.team2) )
+		{ // game over!
+			$("li:visible:not(#other,#undoli,#redoli,#gameover)").hide();
+			$("#gameover").show();
+		}
+		else
+		{
+			$("li:visible:not(#other,#undoli,#redoli,#gameover)").show();
+			$("#gameover").hide();
+		}
+		*/
+	}
+	
+	function processPitch(pitchCode, fieldedBy)
+	{
+		redos = [];
+		
+		var vals = pitchCode.split("-");
+		
+		var atbat = getCurrentAtBat();
+		atbat.pitches[atbat.pitches.length] = pitchCode;
+		
+		if(fieldedBy!=null)
+			atbat.fielder = fieldedBy;
+		
+		var newbases = null;
+		
+		if(vals.length==1)
+		{ //not in play
+			if(vals[0]=="swing" || vals[0]=="called")
+			{
+				atbat.currentstrikes++;
+				if(atbat.currentstrikes==STRIKES_FOR_K && STRIKES_FOR_K>0)
+				{//strikeout
+					batterOut();
+					nextAtBat();
+				}
+			}
+			else if(vals[0]=="foul")
+			{
+				if(atbat.currentstrikes<STRIKES_FOR_K-1 )
+				{
+					atbat.currentstrikes++;
+				}
+				else
+				{
+					atbat.currentfouls++;
+					if(atbat.currentfouls>TWO_STRIKE_FOULS && TWO_STRIKE_FOULS>0)
+					{
+						//foul out
+						batterOut();
+						nextAtBat();
+					}
+				}
+			}
+			else //ball
+			{
+				atbat.currentballs++;
+				if(atbat.currentballs==BALLS_FOR_WALK)
+				{//walk
+					newbases = advanceRunners(1,false);
+					newbases[0].player = atbat.batter;
+					nextAtBat(newbases);
+				}
+			}
+		}
+		else
+		{
+			if(vals[0]=="single")
+			{
+				newbases = advanceRunners(1);
+				newbases[0].player = atbat.batter;
+			}
+			else if(vals[0]=="double")
+			{
+				newbases = advanceRunners(2);
+				newbases[1].player = atbat.batter;
+			}
+			else if(vals[0]=="triple")
+			{
+				newbases = advanceRunners(3);
+				newbases[2].player = atbat.batter;
+			}
+			else if(vals[0]=="homer")
+			{
+				newbases = advanceRunners(4);	
+				atbat.runsScored++;
+				atbat.runnersScored[atbat.runnersScored.length] = atbat.batter;
+			}
+			else if(vals[0]=="out")
+			{
+				batterOut();
+			}
+			else if(vals[0]=="error")
+			{
+				newbases = advanceRunners(1);	// used to be advanceRunners(1,false) (didn't push runners if unforced).  Rule changed.
+				newbases[0].player = atbat.batter;
+			}
+			else if(vals[0]=="dp")
+			{
+				newbases = atbat.bases.clone();
+				if(vals[2]=="failed")
+				{
+					newbases = advanceRunners(1,true,1);
+					batterOut();
+				}
+				else
+				{
+					newbases[0].player = null;
+					batterOut(true);
+				}
+			}
+			else if(vals[0]=="sac")
+			{
+				if(vals[2]=="failed")
+				{
+					newbases = atbat.bases.clone();
+					for(var i=newbases.length-1; i>=0; i--)
+					{
+						if(newbases[i].player!=null) //remove furthest runner
+						{
+							newbases[i].player = null;
+							break;
+						}
+					}
+					newbases = advanceRunners(1,true,2);
+					batterOut(true);
+				}
+				else
+				{
+					newbases = advanceRunners(1,true,1);
+					batterOut();
+				}
+			}
+			nextAtBat(newbases);
+		}
+		saveGames(games);
+		bindGame();
+	}
+
+	function batterOut(doubleplay)
+	{
+		if(doubleplay==null)
+			doubleplay=false;
+			
+		var halfinning = getCurrentHalfInning();
+		halfinning.currentouts++;
+		if(doubleplay)
+			halfinning.currentouts++;
+
+	}
+	
+	function nextAtBat(bases)
+	{
+		var halfinning = null;
+		
+		if(currentGame.halfinnings.length>0)
+			halfinning = getCurrentHalfInning();
+		
+		var inningchange = halfinning!=null && halfinning.currentouts>=OUTS_PER_INNING;
+		
+		/* broken?
+		if(inningchange)
+		{
+			//need to change the batter index before switching half innings and team pitching/batting.
+			getCurrentTeamBatting().currentbatter = ((getCurrentTeamBatting().currentbatter+1)%getCurrentTeamBatting().players.length);
+		}
+		*/
+		
+		if(currentGame.halfinnings.length==0 || inningchange)
+		{
+			//next half inning
+			currentGame.halfinnings[currentGame.halfinnings.length] = new HalfInning();
+			halfinning = getCurrentHalfInning();
+			if(currentGame.halfinnings.length%2==1)
+			{
+				halfinning.teamfielding = currentGame.team1;
+				halfinning.teambatting = currentGame.team2;
+				halfinning.top = true;
+			}
+			else
+			{
+				halfinning.teamfielding = currentGame.team2;
+				halfinning.teambatting = currentGame.team1;
+				halfinning.top = false;
+			}
+			halfinning.number = Math.round(currentGame.halfinnings.length/2);
+			getCurrentTeamFielding().currentpitcher = ((getCurrentTeamFielding().currentpitcher+1)%getCurrentTeamFielding().players.length);
+		}
+		if(bases==null && halfinning.atbats.length>0)
+			bases = getCurrentAtBat().bases.clone();
+		else if(bases==null || inningchange)
+		{
+			bases = new Array();
+			for(var i=0;i<4; i++)
+			{
+				bases[i] = new Base();
+				bases[i].number = i+1;
+			}
+		}
+		
+		// next batter
+		if(halfinning.atbats.length==0) //first batter this half inning
+		{
+			if(currentGame.halfinnings.length - 2 >0) //look at last half inning's last batter
+			{
+				var lasthalfinning = currentGame.halfinnings[currentGame.halfinnings.length-3];
+				getCurrentTeamBatting().currentbatter =
+					(lasthalfinning.atbats[lasthalfinning.atbats.length-1].batterIndex+1) %
+					getCurrentTeamBatting().players.length;
+			}
+			else //teams first half inning
+				getCurrentTeamBatting().currentbatter = 0;
+		}
+		else
+		{
+			getCurrentTeamBatting().currentbatter = 
+				(halfinning.atbats[halfinning.atbats.length-1].batterIndex+1) %
+				getCurrentTeamBatting().players.length;
+		}
+		/*  broken?
+		//next batter
+		if(!inningchange || getCurrentTeamBatting().currentbatter==-1)
+		{
+			//need to change the batter index here if the inning didn't just start, or if it's the first half inning for the team (and it was already handled)
+			getCurrentTeamBatting().currentbatter = ((getCurrentTeamBatting().currentbatter+1)%getCurrentTeamBatting().players.length);
+		}
+		*/
+		halfinning.atbats[halfinning.atbats.length] = new AtBat();
+		
+		getCurrentAtBat().pitcherIndex = getCurrentTeamFielding().currentpitcher;
+		getCurrentAtBat().pitcher = getCurrentTeamFielding().players[getCurrentAtBat().pitcherIndex];
+		
+		getCurrentAtBat().batterIndex = getCurrentTeamBatting().currentbatter;
+		getCurrentAtBat().batter = getCurrentTeamBatting().players[getCurrentAtBat().batterIndex];
+		getCurrentAtBat().bases = bases;
+		
+		
+		setupFielders();
+	}
+	
+	function setupFielders()
+	{
+		var fielded = $("li:has(a[data-fielded-by])");
+		fielded.find("a[data-fielded-by]").attr("data-fielded-by","");
+		fielded.find("span.fieldedby").remove();
+		for(var i=fielded.length; i>=0; i--) // clear previous fielders
+		{
+			var pitch = fielded.eq(i).find("a[data-fielded-by]").attr("data-pitch");
+			
+			var els = fielded.filter(":has([data-pitch="+pitch+"])").slice(1);
+			i-=els.length;
+			els.remove();
+			fielded = $("li:has(a[data-fielded-by])");
+		}
+		
+		var teamfielding = getCurrentTeamFielding();
+		for(var i=0; i<fielded.length; i++) // dupe fielding items for each fielder
+		{
+			var item = fielded.eq(i);
+			for(var j=1; j<teamfielding.players.length; j++)
+			{
+				var newi = item.clone();
+				newi.find("a[data-fielded-by]").attr("data-fielded-by",teamfielding.players[j].name)
+					.append("<span class='fieldedby'> By "+teamfielding.players[j].name+"</span>");
+				
+				item.after(newi);
+			}
+				item.find("a[data-fielded-by]").attr("data-fielded-by",teamfielding.players[0].name)
+					.append("<span class='fieldedby'> by "+teamfielding.players[0].name+"</span>");
+		}
+		
+		try
+		{ // might not be previously init'd
+			$("#game ul").listview("refresh");
+		}
+		catch(exc){
+		}
+	}
+	
+	function advanceRunners(count, pushAll, outsInPlay)
+	{
+		if(pushAll==null)
+			pushAll=true;
+		if(outsInPlay==null)
+			outsInPlay = 0;
+			
+		var atbat = getCurrentAtBat();
+		var halfInning = getCurrentHalfInning();
+		var newbases = atbat.bases.clone();
+		
+		for(var i=newbases.length-1; i>=0; i--)
+		{
+			if(newbases[i].player!=null)
+			{
+				var pushthis = pushAll;
+				if(!pushAll)
+				{
+					var filled = true;
+					for(var j=i; j>=0; j--)
+					{
+						if(newbases[j].player==null)
+						{
+							filled=false;
+							break;
+						}
+					}
+					pushthis=filled;
+				}
+				if(pushthis)
+				{
+					if(newbases.length-1>i+count)
+					{//advance player
+						newbases[i+count].player = newbases[i].player;
+					}
+					else
+					{// score
+						if(outsInPlay+halfInning.currentouts<OUTS_PER_INNING)
+						{
+							atbat.runsScored++;
+							atbat.runnersScored[atbat.runnersScored.length] = newbases[i].player;
+						}
+					}
+					newbases[i].player = null;
+				}
+			}
+		}
+		return newbases;
+	}
+	
+	function getCurrentAtBat()
+	{
+		var hi = getCurrentHalfInning();
+		return hi.atbats[hi.atbats.length-1];
+	}
+	
+	
+	function getCurrentHalfInning()
+	{
+		return currentGame.halfinnings[currentGame.halfinnings.length-1];
+	}
+	
+	function getCurrentTeamFielding()
+	{
+		return getCurrentHalfInning().teamfielding;
+	}
+	function getCurrentTeamBatting()
+	{
+		return getCurrentHalfInning().teambatting;
+	}
+	function gameReviver(key, value)
+	{
+		
+		if(value!=null && value.players!=null && value.currentbatter!=null
+			 && value.currentpitcher!=null && value.name!=null && value.getId==null)
+		{
+			value.getId = function(){
+				var id = this.name;
+				for(var i=0;i<this.players.length; i++)
+					id += this.players[i].name;
+				return id;
+			};
+		}
+		return value;
+	}
+	function getGames()
+	{
+		if(localStorage["games"]==null)
+			return new Array();
+		return JSON.parse(localStorage["games"],gameReviver);
+    }
+	var savedgamesloaded=true;
+    function getSavedGames() {
+		savedgamesloaded=false;
+		$.getJSON(LOAD_URL, function (data) {
+			savedGames = JSON.parse(JSON.stringify(data),gameReviver);
+			
+			savedgamesloaded=true;
+		})
+		.error(function(){
+			savedGames = [];
+			savedgamesloaded=true;
+		})
+		;
+    }
+	function saveGames(games)
+	{
+		undos[undos.length] = JSON.stringify(currentGame);
+		localStorage["games"] = JSON.stringify(games);
+	}
+	function undo()
+	{
+		if(undos.length-2>=0)
+		{
+			redos[redos.length] = JSON.stringify(currentGame);
+			currentGame = JSON.parse(undos[undos.length-2],gameReviver); // last is current state, skip one more back
+			games[currentGameIndex] = currentGame;
+			saveGames(games);
+			undos.remove(undos.length-2, undos.length-1); // need to remove the last two - the savegames above just added one.
+			bindGame();
+		}
+	}
+	function redo()
+	{
+		if(redos.length>0)
+		{
+			currentGame = JSON.parse(redos[redos.length-1],gameReviver);
+			games[currentGameIndex] = currentGame;
+			saveGames(games);
+			redos.remove(redos.length-1);
+			bindGame();
+		}
+	}
+	function post()
+	{
+		var gamename = currentGame.team2.name + " at " + currentGame.team1.name;
+		$.post(POST_URL, {json: JSON.stringify(currentGame), name: gamename});
+	}
+	function output()
+	{
+		console.log(currentGame);
+		console.log(JSON.stringify(currentGame));
+	}
+	
+	
+	function bindGameStats()
+	{
+		if(!savedgamesloaded)
+		{
+			setTimeout(bindGameStats,100);
+			return;
+		}
+		setBoxScores($("#boxscore"));
+		setTeamStats($("#team1batting"),currentGame.team1,true);
+		setTeamStats($("#team2batting"),currentGame.team2,true);
+		setTeamStats($("#team1pitching"),currentGame.team1,false);
+		setTeamStats($("#team2pitching"),currentGame.team2,false);
+		
+		$("#team1batting").tablesorter(); 
+		$("#team2batting").tablesorter(); 
+		$("#team1pitching").tablesorter(); 
+		$("#team2pitching").tablesorter(); 
+	
+	}
+	function addTableStatHeader($table)
+	{
+		$table.find("thead tr").append("<th title='players name'>Name</th>");
+		$table.find("thead tr").append("<th title='games played'>GP</th>");
+		$table.find("thead tr").append("<th title='innings played'>IP</th>");
+		$table.find("thead tr").append("<th title='hits'>H</th>");
+		$table.find("thead tr").append("<th title='hits per inning'>H/I</th>");
+		$table.find("thead tr").append("<th title='runs batted in'>RBI</th>");
+		$table.find("thead tr").append("<th title='RBI per inning'>RBI/I</th>");
+		$table.find("thead tr").append("<th title='runs scored'>R</th>");
+		$table.find("thead tr").append("<th title='runs per inning'>R/I</th>");
+		$table.find("thead tr").append("<th title='walks'>W</th>");
+		$table.find("thead tr").append("<th title='walk percentage'>W%</th>");
+		$table.find("thead tr").append("<th title='errors'>E</th>");
+		$table.find("thead tr").append("<th title='at bats'>AB</th>");
+		$table.find("thead tr").append("<th title='strikeouts'>K</th>");
+		$table.find("thead tr").append("<th title='strikeout percentage'>K%</th>");
+		$table.find("thead tr").append("<th title='batting average'>AVG</th>");
+		$table.find("thead tr").append("<th title='plate appearances'>PA</th>");
+		$table.find("thead tr").append("<th title='on base percentage'>OB%</th>");
+		$table.find("thead tr").append("<th title='singles'>1B</th>");
+		$table.find("thead tr").append("<th title='singles per inning'>1B/I</th>");
+		$table.find("thead tr").append("<th title='doubles'>2B</th>");
+		$table.find("thead tr").append("<th title='doubles per inning'>2B/I</th>");
+		$table.find("thead tr").append("<th title='triples'>3B</th>");
+		$table.find("thead tr").append("<th title='triples per inning'>3B/I</th>");
+		$table.find("thead tr").append("<th title='home runs'>HR</th>");
+		$table.find("thead tr").append("<th title='home runs per inning'>HR/I</th>");
+		$table.find("thead tr").append("<th title='total bases'>TB</th>");
+		$table.find("thead tr").append("<th title='total bases per inning'>TB/I</th>");
+		$table.find("thead tr").append("<th title='slugging percentage'>SLG</th>");
+		$table.find("thead tr").append("<th title='on base plus slugging'>OPS</th>");
+		$table.find("thead tr").append("<th title='pitches'>P</th>");
+		$table.find("thead tr").append("<th title='pitches per inning'>P/I</th>");
+		$table.find("thead tr").append("<th title='balls'>B</th>");
+		$table.find("thead tr").append("<th title='strikes'>S</th>");
+		$table.find("thead tr").append("<th title='strike percentage'>S%</th>");
+		$table.find("thead tr").append("<th title='swings'>SW</th>");
+		$table.find("thead tr").append("<th title='swing percentage'>SW%</th>");
+	}
+	function bindSeasonStat($table,games,isbatting)
+	{
+		
+		$table.find("tr").remove();
+		
+		
+		$table.find("thead").append("<tr />");
+		
+		addTableStatHeader($table);
+		
+		var players = new Array();
+		for(var i=0; i<games.length; i++)
+		{
+			for(var j=0; j<games[i].team1.players.length; j++)
+			{
+				if($.inArray(games[i].team1.players[j].name,players)==-1)
+					players[players.length] = games[i].team1.players[j].name;
+			}
+			for(var j=0; j<games[i].team2.players.length; j++)
+			{
+				if($.inArray(games[i].team2.players[j].name,players)==-1)
+					players[players.length] = games[i].team2.players[j].name;
+			}
+		}
+		for(var i=0; i<players.length; i++)
+		{
+			var $tr = $("<tr />");
+			addPlayerStats($tr, games, players[i],isbatting);
+			$table.find("tbody").append($tr);
+		}
+	}
+	function bindSeasonStats()
+	{
+		if(!savedgamesloaded)
+		{
+			setTimeout(bindSeasonStats,100);
+			return;
+		}
+		var games = savedGames[currentSeasonIndex].games;
+		
+		bindSeasonStat($("#playerbatting"),games,true);
+		
+		bindSeasonStat($("#playerpitching"),games,false);
+		
+		$("#playerbatting").tablesorter(); 
+		$("#playerpitching").tablesorter(); 
+		
+	}
+		
+	function addPlayerStats($tr,currentGame,player, isbatting)
+	{
+		if(player.name!=null)
+			player = player.name;
+		if(isbatting==null)
+			isbatting = true;
+			
+		
+		var gp = getPlayerGames(currentGame,player,isbatting);
+		var ip = getPlayerInnings(currentGame,player,isbatting);
+		var pas = getPlayerOutcomes(currentGame,player,plateappearanceregex, isbatting);
+		var abs = getPlayerOutcomes(currentGame,player,atbatregex, isbatting);
+		var ks = getPlayerOutcomes(currentGame,player,strikeoutregex, isbatting);
+		var hits = getPlayerOutcomes(currentGame,player,hitregex, isbatting);
+		var rbi = (getPlayerOutcomesScore(currentGame,player,hitregex, isbatting)+getPlayerOutcomesScore(currentGame,player,walkregex, isbatting));
+		var walks = getPlayerOutcomes(currentGame,player,walkregex, isbatting);
+		var errors = getPlayerOutcomes(currentGame,player,errorregex, isbatting);
+		var ob = roundNumber((getPlayerOutcomes(currentGame,player,hitregex, isbatting)+getPlayerOutcomes(currentGame,player,walkregex, isbatting))/getPlayerOutcomes(currentGame,player,plateappearanceregex, isbatting),3);
+		var singles = getPlayerOutcomes(currentGame,player,singleregex, isbatting);
+		var doubles = getPlayerOutcomes(currentGame,player,doubleregex, isbatting);
+		var triples = getPlayerOutcomes(currentGame,player,tripleregex, isbatting);
+		var homeruns = getPlayerOutcomes(currentGame,player,homerregex, isbatting);
+		var runs = getPlayerRunsScored(currentGame,player,isbatting);
+		
+		var pitches = getPlayerPitches(currentGame,player,pitchregex, isbatting);
+		var balls = getPlayerPitches(currentGame,player,ballregex, isbatting);
+		var strikes = (pitches-balls);
+		var swings = getPlayerPitches(currentGame,player,swingregex, isbatting);
+		
+		var tb = singles +
+			doubles*2 +
+			triples*3 +
+			homeruns*4;
+			
+		var slg = roundNumber(tb/abs,3);
+		
+		$tr.append("<th>"+player+"</th>");
+		$tr.append("<td>"+gp+"</td>");
+		$tr.append("<td>"+ip+"</td>");
+		
+		$tr.append("<td>"+hits+"</td>");
+		$tr.append("<td>"+roundNumber(hits/ip,3)+"</td>");
+	
+		$tr.append("<td>"+rbi+"</td>");
+		$tr.append("<td>"+roundNumber(rbi/ip,3)+"</td>");
+		
+		$tr.append("<td>"+runs+"</td>");
+		$tr.append("<td>"+roundNumber(runs/ip,3)+"</td>");
+		
+		$tr.append("<td>"+walks+"</td>");
+		
+		$tr.append("<td>"+roundNumber(walks/pas,3)+"</td>");
+		
+		$tr.append("<td>"+errors+"</td>");
+		
+		$tr.append("<td>"+abs+"</td>");
+		
+		$tr.append("<td>"+ks+"</td>");
+		
+		$tr.append("<td>"+roundNumber(ks/pas,3)+"</td>");
+		
+		$tr.append("<td>"+roundNumber(hits/abs,3)+"</td>");
+		
+		$tr.append("<td>"+pas+"</td>");
+		
+		$tr.append("<td>"+ob+"</td>");
+		
+		$tr.append("<td>"+singles+"</td>");
+		$tr.append("<td>"+roundNumber(singles/ip,3)+"</td>");
+		
+		$tr.append("<td>"+doubles+"</td>");
+		$tr.append("<td>"+roundNumber(doubles/ip,3)+"</td>");
+		
+		$tr.append("<td>"+triples+"</td>");
+		$tr.append("<td>"+roundNumber(triples/ip,3)+"</td>");
+		
+		$tr.append("<td>"+homeruns+"</td>");
+		$tr.append("<td>"+roundNumber(homeruns/ip,3)+"</td>");
+		
+			
+		$tr.append("<td>"+tb+"</td>");
+		$tr.append("<td>"+roundNumber(tb/ip,3)+"</td>");
+		
+		$tr.append("<td>"+slg+"</td>");
+		
+		$tr.append("<td>"+roundNumber(slg+ob,3)+"</td>");
+		
+		$tr.append("<td>"+pitches+"</td>");
+		$tr.append("<td>"+roundNumber(pitches/ip,3)+"</td>");
+		$tr.append("<td>"+balls+"</td>");
+		$tr.append("<td>"+strikes+"</td>");
+		$tr.append("<td>"+roundNumber(strikes/pitches,3)+"</td>");
+		$tr.append("<td>"+swings+"</td>");
+		$tr.append("<td>"+roundNumber(swings/pitches,3)+"</td>");
+	}
+	
+	function setTeamStats($table,team, isbatting)
+	{
+		$table.find("tr").remove();
+		$table.find("thead").append("<tr/>");
+		for(var i=0; i<team.players.length+1; i++)
+			$table.find("tbody").append("<tr/>");
+			
+		addTableStatHeader($table);
+		
+		for(var i=0; i<team.players.length; i++)
+		{
+			var $tr = $table.find("tbody tr:eq("+i+")");
+			addPlayerStats($tr,currentGame,team.players[i],isbatting);
+		}
+		
+		if(isbatting)
+		{
+		
+			var gp = getTeamGames(currentGame,team);
+			var ip = getTeamInnings(currentGame,team, isbatting);
+			var pas = getTeamOutcomes(currentGame,team,plateappearanceregex, isbatting);
+			var abs = getTeamOutcomes(currentGame,team,atbatregex, isbatting);
+			var ks = getTeamOutcomes(currentGame,team,strikeoutregex, isbatting);
+			var hits = getTeamOutcomes(currentGame,team,hitregex, isbatting);
+			var rbi = (getTeamOutcomesScore(currentGame,team,hitregex, isbatting)+getTeamOutcomesScore(currentGame,team,walkregex, isbatting));
+			var walks = getTeamOutcomes(currentGame,team,walkregex, isbatting);
+			var errors = getTeamOutcomes(currentGame,team,errorregex, isbatting);
+			var ob = roundNumber((getTeamOutcomes(currentGame,team,hitregex, isbatting)+getTeamOutcomes(currentGame,team,walkregex, isbatting))/getTeamOutcomes(currentGame,team,plateappearanceregex, isbatting),3);
+			var singles = getTeamOutcomes(currentGame,team,singleregex, isbatting);
+			var doubles = getTeamOutcomes(currentGame,team,doubleregex, isbatting);
+			var triples = getTeamOutcomes(currentGame,team,tripleregex, isbatting);
+			var homeruns = getTeamOutcomes(currentGame,team,homerregex, isbatting);
+			
+			var pitches = getTeamPitches(currentGame,team,pitchregex,isbatting);
+			var balls = getTeamPitches(currentGame,team,ballregex,isbatting);
+			var strikes = (pitches-balls);
+			var swings = getTeamPitches(currentGame,team,swingregex, isbatting);
+			var runs = 0;
+			
+			var tb = singles +
+				doubles*2 +
+				triples*3 +
+				homeruns*4;
+				
+			var slg = roundNumber(tb/abs,3);
+				
+			var $tr = $table.find("tbody tr:eq("+team.players.length+")");
+			$tr.append("<th>"+team.name+"</th>");
+			
+			$tr.append("<td>"+gp+"</td>");
+			$tr.append("<td>"+ip+"</td>");
+			
+			$tr.append("<td>"+hits+"</td>");
+			$tr.append("<td>"+roundNumber(hits/ip,3)+"</td>");
+		
+			$tr.append("<td>"+rbi+"</td>");
+			$tr.append("<td>"+roundNumber(rbi/ip,3)+"</td>");
+			
+			$tr.append("<td>"+runs+"</td>");
+			$tr.append("<td>"+roundNumber(runs/ip,3)+"</td>");
+			
+			$tr.append("<td>"+walks+"</td>");
+			
+			$tr.append("<td>"+roundNumber(walks/pas,3)+"</td>");
+			
+			$tr.append("<td>"+errors+"</td>");
+			
+			$tr.append("<td>"+abs+"</td>");
+			
+			$tr.append("<td>"+ks+"</td>");
+			
+			$tr.append("<td>"+roundNumber(ks/pas,3)+"</td>");
+			
+			$tr.append("<td>"+roundNumber(hits/abs,3)+"</td>");
+			
+			$tr.append("<td>"+pas+"</td>");
+			
+			$tr.append("<td>"+ob+"</td>");
+			
+			$tr.append("<td>"+singles+"</td>");
+			$tr.append("<td>"+roundNumber(singles/ip,3)+"</td>");
+			
+			$tr.append("<td>"+doubles+"</td>");
+			$tr.append("<td>"+roundNumber(doubles/ip,3)+"</td>");
+			
+			$tr.append("<td>"+triples+"</td>");
+			$tr.append("<td>"+roundNumber(triples/ip,3)+"</td>");
+			
+			$tr.append("<td>"+homeruns+"</td>");
+			$tr.append("<td>"+roundNumber(homeruns/ip,3)+"</td>");
+			
+				
+			$tr.append("<td>"+tb+"</td>");
+			$tr.append("<td>"+roundNumber(tb/ip,3)+"</td>");
+			
+			$tr.append("<td>"+slg+"</td>");
+			
+			$tr.append("<td>"+roundNumber(slg+ob,3)+"</td>");
+			
+			$tr.append("<td>"+pitches+"</td>");
+			$tr.append("<td>"+roundNumber(pitches/ip,3)+"</td>");
+			$tr.append("<td>"+balls+"</td>");
+			$tr.append("<td>"+strikes+"</td>");
+			$tr.append("<td>"+roundNumber(strikes/pitches,3)+"</td>");
+			$tr.append("<td>"+swings+"</td>");
+			$tr.append("<td>"+roundNumber(swings/pitches,3)+"</td>");
+		}
+	
+	}
+	function setBoxScores($table)
+	{
+		if(currentGame!=null)
+		{
+			$table.find("tr").remove();
+			$table.find("thead").append("<tr/>");
+			$table.find("tbody").append("<tr/>").append("<tr/>");
+			
+			$table.find("thead tr").append("<th>Team</th>");
+			$table.find("tbody tr:eq(0)").append("<th>"+currentGame.team2.name+"</th>");
+			$table.find("tbody tr:eq(1)").append("<th>"+currentGame.team1.name+"</th>");
+			
+			for(var i=0; i<currentGame.halfinnings.length; i++)
+			{
+				if(currentGame.halfinnings[i].atbats[0].pitches.length==0)
+				{
+					if(i%2==1)
+						$table.find("tbody tr:eq(1)").append("<td>X</td>");
+					continue;
+				}
+				if(i%2==0)
+				{
+					$table.find("thead tr").append("<th>"+((i/2)+1)+"</th>");
+					
+					$table.find("tbody tr:eq(0)").append("<td>"+getHalfInningScore(currentGame.halfinnings[i])+"</td>");
+				}
+				else
+				{
+					$table.find("tbody tr:eq(1)").append("<td>"+getHalfInningScore(currentGame.halfinnings[i])+"</td>");
+				}
+			}
+			$table.find("thead tr").append("<th>&nbsp;</th>");
+			$table.find("tbody tr:eq(0)").append("<td>&nbsp;</td>");
+			$table.find("tbody tr:eq(1)").append("<td>&nbsp;</td>");
+			
+			$table.find("thead tr").append("<th>R</th>");
+			$table.find("tbody tr:eq(0)").append("<th>"+getTeamScore(currentGame,currentGame.team2)+"</th>");
+			$table.find("tbody tr:eq(1)").append("<th>"+getTeamScore(currentGame,currentGame.team1)+"</th>");
+			
+			
+			$table.find("thead tr").append("<th>H</th>");
+			$table.find("tbody tr:eq(0)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team2,hitregex)+"</td>");
+			$table.find("tbody tr:eq(1)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team1,hitregex)+"</td>");
+		
+			
+			
+			$table.find("thead tr").append("<th>E</th>");
+			$table.find("tbody tr:eq(0)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team1,errorregex)+"</td>");
+			$table.find("tbody tr:eq(1)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team2,errorregex)+"</td>");
+		}
+	}
+	
+	function roundNumber(num, dec) {
+		var result = Math.round(num*Math.pow(10,dec))/Math.pow(10,dec);
+		return result;
+	}
+	
+	// Array Remove - By John Resig (MIT Licensed)
+	Array.prototype.remove = function(from, to) {
+	  var rest = this.slice((to || from) + 1 || this.length);
+	  this.length = from < 0 ? this.length + from : from;
+	  return this.push.apply(this, rest);
+	};
+	// Array (deep) clone
+	Array.prototype.clone = function() { return JSON.parse(JSON.stringify(this)); };
+	
+	</script>
+</head>
+<body>
+	<div data-role="page" id="home">
+        <div data-role="header">
+            <h1>
+                Games</h1>
+        </div>
+        <div data-role="content">
+            <ul data-role="listview">
+				<li><a href="#newgame">[Start New Game]</a></li>
+			</ul>
+		</div>
+	</div>
+	<div data-role="page" id="newgame">
+        <div data-role="header">
+            <h1>
+                Start New Game</h1>
+        </div>
+        <div data-role="content">
+			<form id="newgameform">
+				<div data-role="fieldcontain">
+					<label for="team1" class="ui-hidden-accessible">Home Team:</label>
+					<input type="text" name="team1" id="team1" value="" placeholder="Home Team"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player1" class="ui-hidden-accessible">Player 1:</label>
+					<input type="text" name="player1" id="player1" value="" placeholder="Player 1"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player2" class="ui-hidden-accessible">Player 2</label>
+					<input type="text" name="player2" id="player2" value="" placeholder="Player 2"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player3" class="ui-hidden-accessible">Player 3:</label>
+					<input type="text" name="player3" id="player3" value="" placeholder="Player 3"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player4" class="ui-hidden-accessible">Player 4:</label>
+					<input type="text" name="player4" id="player4" value="" placeholder="Player 4"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="team2" class="ui-hidden-accessible">Away Team:</label>
+					<input type="text" name="team2" id="team2" value="" placeholder="Away Team"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player1_2" class="ui-hidden-accessible">Player 1:</label>
+					<input type="text" name="player1_2" id="player1_2" value="" placeholder="Player 1"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player2_2" class="ui-hidden-accessible">Player 2</label>
+					<input type="text" name="player2_2" id="player2_2" value="" placeholder="Player 2"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player3_2" class="ui-hidden-accessible">Player 3:</label>
+					<input type="text" name="player3_2" id="player3_2" value="" placeholder="Player 3"/>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player4_2" class="ui-hidden-accessible">Player 4:</label>
+					<input type="text" name="player4_2" id="player4_2" value="" placeholder="Player 4"/>
+				</div>
+				<fieldset class="ui-grid-a">
+					<div class="ui-block-a"><a href="#home" data-role="button" data-theme="d">Cancel</a></div>
+					<div class="ui-block-b"><button type="submit"  data-theme="a">Submit</button></div>
+				</fieldset>
+				<input type="hidden" name="createaction" />
+			</form>
+		</div>
+	</div>
+    <div data-role="page" id="game">
+        <div data-role="header">
+            <h1>
+                Wiffle Ball Game</h1>
+        </div>
+        <div data-role="content">
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Batter:</strong> <span id="batter"></span></div>
+				<div class="ui-block-b"><strong>Pitcher:</strong> <span id="pitcher"></span></div>
+			</div>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Balls:</strong> <span id="balls"></span></div>
+				<div class="ui-block-b"><strong>1st:</strong> <span id="first"></span></div>
+			</div>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Strikes:</strong> <span id="strikes"></span></div>
+				<div class="ui-block-b"><strong>2nd:</strong> <span id="second"></span></div>
+			</div>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><strong>Outs:</strong> <span id="outs"></span></div>
+				<div class="ui-block-b"><strong>3rd:</strong> <span id="third"></span></div>
+			</div>
+			<p><strong>Inning:</strong> <span id="inning"></span></p>
+            <ul data-role="listview">
+                <li data-role="list-divider" style="display:none;" id="gameover">Game Over!</li>
+                <li data-role="list-divider">Pitch</li>
+                <li data-icon="false"><a href="#game" data-pitch="ball">Ball</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="ball_hbp">Hit by pitch</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="swing">Swing and miss</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="foul">Foul Ball</a></li>
+                <li data-icon="false"><a href="#game" data-pitch="called">Called strike</a></li>
+                <li data-role="list-divider">In play</li>
+                <li>
+					Ground ball
+					<ul>
+						<li data-role="list-divider">Safe</li>
+						<li><a href="#game" data-pitch="single-grounder">Hit (Single)</a></li>
+						<li><a href="#game" data-pitch="error-grounder" data-fielded-by="">Error (Bobbled)</a></li>
+						<li data-role="list-divider">Out</li>
+						<li><a href="#game" data-pitch="out-grounder-routine" data-fielded-by="">Routine Catch (Out)</a></li>
+						<li><a href="#game" data-pitch="out-grounder-robbed" data-fielded-by="">Robbed (Great Catch - Out)</a></li>
+						<li class="dp" data-role="list-divider">Double play</li>
+						<li class="dp"><a href="#game"  data-pitch="dp-grounder-routine" data-fielded-by="">Routine DP</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-grounder-robbed" data-fielded-by="">Robbed (Great DP)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-grounder-failed" data-fielded-by="">Failed DP</a></li>
+						<li data-role="list-divider">Other</li>
+						<li><a href="#game">Cancel</a></li>
+					</ul>
+				</li>
+                <li>
+					Fly ball
+					<ul>
+						<li data-role="list-divider">Safe</li>
+						<li><a href="#game" data-pitch="double-fly">Hit (Double)</a></li>
+						<li><a href="#game" data-pitch="triple-fly">Hit (Triple)</a></li>
+						<li><a href="#game" data-pitch="homer-fly">Hit (Home Run)</a></li>
+						<li><a href="#game" data-pitch="error-fly" data-fielded-by="">Error (Dropped)</a></li>
+						<li data-role="list-divider">Out</li>
+						<li><a href="#game" data-pitch="out-fly-ceiling">Ceiling (Out)</a></li>
+						<li><a href="#game" data-pitch="out-fly-caught" data-fielded-by="">Caught (Out)</a></li>
+						<li><a href="#game" data-pitch="out-fly-robbed" data-fielded-by="">Robbed (off wall - out)</a></li>
+						<li class="sac" data-role="list-divider">Sac Fly</li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-ceiling">Ceiling (Sac Fly, Out)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-caught" data-fielded-by="">Caught (Sac Fly, Out)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-robbed" data-fielded-by="">Robbed (off wall, Sac Fly, Out)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-failed" data-fielded-by="">Failed Sac Fly (2 outs - furthest runner)</a></li>
+						<!--
+						<li class="dp" data-role="list-divider">Double play</li>
+						<li class="dp"><a href="#game" data-pitch="dp-fly-caught" data-fielded-by="">Caught (Routine DP)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-fly-robbed" data-fielded-by="">Robbed (off wall DP)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-fly-failed" data-fielded-by="">Failed DP (1 out - runners advance)</a></li>
+						!-->
+						<li data-role="list-divider">Other</li>
+						<li><a href="#game">Cancel</a></li>
+					</ul>
+				</li>
+                <li>
+					Line drive
+					<ul>
+						<li data-role="list-divider">Safe</li>
+						<li><a href="#game" data-pitch="double-linedrive">Hit (Double)</a></li>
+						<li><a href="#game" data-pitch="triple-linedrive">Hit (Triple)</a></li>
+						<li><a href="#game" data-pitch="homer-linedrive">Hit (Home Run)</a></li>
+						<li><a href="#game" data-pitch="single-linedrive" data-fielded-by="">Knocked down (Single)</a></li>
+						<li data-role="list-divider">Out</li>
+						<li><a href="#game" data-pitch="out-linedrive-caught" data-fielded-by="">Caught (Out)</a></li>
+						<li><a href="#game" data-pitch="out-linedrive-robbed" data-fielded-by="">Robbed (off wall - Out)</a></li>
+						<li class="sac" data-role="list-divider">Sac Fly</li>
+						<li class="sac"><a href="#game" data-pitch="sac-linedrive-caught" data-fielded-by="">Caught (Out, Sac Fly)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-linedrive-robbed" data-fielded-by="">Robbed (off wall, Out, Sac Fly)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-linedrive-failed" data-fielded-by="">Failed Sac Fly (2 outs - furthest runner)</a></li>
+						<!--
+						<li class="dp" data-role="list-divider">Double play</li>
+						<li class="dp"><a href="#game" data-pitch="dp-linedrive-caught" data-fielded-by="">Caught (Routine DP)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-linedrive-robbed" data-fielded-by="">Robbed (off wall DP)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-linedrive-failed" data-fielded-by="">Failed DP (1 out - runners advance)</a></li>
+						-->
+						<li data-role="list-divider">Other</li>
+						<li><a href="#game">Cancel</a></li>
+					</ul></li>
+                <li data-role="list-divider" id="other">Other</li>
+                <li id="undoli" data-icon="false"><a href="#game" id="undo">Undo</a></li>
+                <li id="redoli" data-icon="false"><a href="#game" id="redo">Redo</a></li>
+				<!-- not implemented yet
+                <li><a href="#">Change fielder</a></li>
+                <li><a href="#">Change batter</a></li>
+                <li><a href="#">Change pitcher</a></li>
+                <li><a href="#">Game over (time)</a></li>
+				-->
+                <li><a href="#home">Back To Game List</a></li>
+                <li data-icon="false"><a href="#" id="post">Send to Server</a></li>
+                <li data-icon="false"><a href="#" id="output">Output Game</a></li>
+            </ul>
+        </div>
+    </div>
+    <div data-role="page" id="gamestats" class="grid">
+		<table id="boxscore">
+			<thead>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+		<h3>Batting</h3>
+		<table id="team1batting" class="grid">
+			<thead>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+		<p></p>
+		<table id="team2batting" class="grid">
+			<thead>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+		<h3>Pitching (Batting Against)</h3>
+		<table id="team1pitching" class="grid">
+			<thead>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+		<p></p>
+		<table id="team2pitching" class="grid">
+			<thead>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+		<p></p>
+		<ul data-role="listview">
+			<li><a href="#home">Back To Game List</a></li>
+		</ul>
+	</div>
+    <div data-role="page" id="seasonstats" class="grid">
+		<h3>Batting</h3>
+		<table id="playerbatting" class="grid">
+			<thead>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+		<h3>Pitching (Batting Against)</h3>
+		<table id="playerpitching" class="grid">
+			<thead>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+		<p></p>
+		<ul data-role="listview">
+			<li><a href="#home">Back To Game List</a></li>
+		</ul>
+	</div>
+</body>
+</html>

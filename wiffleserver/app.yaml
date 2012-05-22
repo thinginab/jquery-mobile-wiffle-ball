@@ -1,0 +1,134 @@
+application: wiffletracker
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: true
+
+handlers:
+
+- url: /favicon\.ico
+  static_files: static/images/favicon.ico
+  upload: static/images/favicon\.ico
+  
+- url: /
+  static_files: static/html/splash.html
+  upload: static/html/splash\.html
+  
+- url: /season/[^/]*/js/all\.min\.js
+  static_files: static/js/all.min.js
+  upload: static/js/all.min.js
+  
+- url: /season/[^/]*/css/all\.css
+  static_files: static/css/all.css
+  upload: static/css/all.css
+  
+- url: /season/[^/]*/images/blwb_icon\.png
+  static_files: static/images/blwb_icon.png
+  upload: static/images/blwb_icon.png
+  
+- url: /season/[^/]*/images/blwb_banner\.png
+  static_files: static/images/blwb_banner.png
+  upload: static/images/blwb_banner.png
+  
+- url: /season/[^/]*/images/favicon\.png
+  static_files: static/images/favicon.png
+  upload: static/images/favicon.png
+  
+- url: /season/[^/]*/css/images/ajax-loader\.png
+  static_files: static/css/images/ajax-loader.png
+  upload: static/css/images/ajax-loader.png
+  
+- url: /season/[^/]*/css/images/icons-18-white\.png
+  static_files: static/css/images/icons-18-white.png
+  upload: static/css/images/icons-18-white.png
+  
+- url: /season/[^/]*/css/images/ui-bg_fine-grain_10_eceadf_60x60\.png
+  static_files: static/css/images/ui-bg_fine-grain_10_eceadf_60x60.png
+  upload: static/css/images/ui-bg_fine-grain_10_eceadf_60x60.png
+
+- url: /season/[^/]*/css/images/ui-bg_fine-grain_65_654b24_60x60\.png
+  static_files: static/css/images/ui-bg_fine-grain_65_654b24_60x60.png
+  upload: static/css/images/ui-bg_fine-grain_65_654b24_60x60.png
+  
+- url: /season/[^/]*/css/themes/images/sortable\.gif
+  static_files: static/css/themes/images/sortable.gif
+  upload: static/css/themes/images/sortable.gif
+  
+- url: /season/[^/]*/css/themes/images/sort-desc\.gif
+  static_files: static/css/themes/images/sort-desc.gif
+  upload: static/css/themes/images/sort-desc.gif
+  
+- url: /season/[^/]*/css/themes/images/sort-asc\.gif
+  static_files: static/css/themes/images/sort-asc.gif
+  upload: static/css/themes/images/sort-asc.gif
+  
+- url: /season/[^/]*/load
+  script: server.app
+  
+- url: /season/[^/]*/save
+  script: server.app
+
+- url: /season/[^/]*/
+  static_files: static/html/index.html
+  upload: static/html/index\.html
+  
+- url: /js/all\.min\.js
+  static_files: static/js/all.min.js
+  upload: static/js/all.min.js
+  
+- url: /js/modernizr\.foundation\.js
+  static_files: static/js/modernizr.foundation.js
+  upload: static/js/modernizr.foundation.js
+  
+- url: /js/jquery\.min\.js
+  static_files: static/js/jquery.min.js
+  upload: static/js/jquery.min.js
+  
+- url: /js/foundation\.js
+  static_files: static/js/foundation.js
+  upload: static/js/foundation.js
+  
+- url: /js/app\.js
+  static_files: static/js/app.js
+  upload: static/js/app.js
+  
+- url: /css/all\.css
+  static_files: static/css/all.css
+  upload: static/css/all.css
+  
+- url: /css/foundation\.css
+  static_files: static/css/foundation.css
+  upload: static/css/foundation.css
+  
+- url: /css/app\.css
+  static_files: static/css/app.css
+  upload: static/css/app.css
+  
+- url: /css/ie\.css
+  static_files: static/css/ie.css
+  upload: static/css/ie.css
+  
+- url: /css/images
+  static_dir: static/css/images
+  
+- url: /css/themes/images
+  static_dir: static/css/images
+  
+- url: /images
+  static_dir: static/images
+  
+  
+- url: /html
+  static_dir: static/html
+
+  
+- url: /other
+  static_dir: static/other
+  
+- url: /main.manifest
+  mime_type: text/cache-manifest
+  static_files: main.manifest
+  upload: main.manifest  
+  
+- url: /.*
+  script: server.app

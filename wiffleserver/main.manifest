@@ -1,0 +1,25 @@
+CACHE MANIFEST
+# Cache manifest version 0.0.93
+# If you change the version number in this comment,
+# the cache manifest is no longer byte-for-byte
+# identical.
+/
+/images/blwb_icon.png
+/images/blwb_banner.png
+/images/favicon.png
+/css/all.css
+/js/all.min.js
+/css/images/ajax-loader.png
+/css/images/icons-18-white.png
+/css/images/ui-bg_fine-grain_10_eceadf_60x60.png
+/css/images/ui-bg_fine-grain_65_654b24_60x60.png
+/css/themes/images/sort-desc.gif
+/css/themes/images/sortable.gif
+/css/themes/images/sort-asc.gif
+http://www.google-analytics.com/ga.js
+
+#NETWORK:
+# All URLs that start with the following lines
+# are whitelisted.
+http://www.google-analytics.com/ga.js
+ 
