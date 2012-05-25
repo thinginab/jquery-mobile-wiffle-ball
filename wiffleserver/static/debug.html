@@ -689,17 +689,17 @@
                 <li data-role="list-divider" >In Play</li>
                 <li>
 					Ground Ball
-					<ul class="inplay" data-theme="a">
+					<ul class="inplay grounder" data-theme="a">
 						<li data-role="list-divider" >Safe</li>
-						<li><a href="#game" data-pitch="single-grounder" >Hit (Single)</a></li>
-						<li><a href="#game" data-pitch="error-grounder" data-fielded-by>Error (Dropped)</a></li>
+						<li><a href="#game" data-pitch="single-grounder">Hit (Single)</a></li>
+						<li><a href="#game" data-pitch="error-grounder" data-fielded-by-template>Error (Dropped)</a></li>
 						<li data-role="list-divider" >Out</li>
-						<li><a href="#game" data-pitch="out-grounder-routine" data-fielded-by>Routine Catch (Out)</a></li>
-						<li><a href="#game" data-pitch="out-grounder-robbed" data-fielded-by>Robbed (Great Catch - Out)</a></li>
+						<li><a href="#game" data-pitch="out-grounder-routine" data-fielded-by-template>Routine Catch (Out)</a></li>
+						<li><a href="#game" data-pitch="out-grounder-robbed" data-fielded-by-template>Robbed (Great Catch - Out)</a></li>
 						<li class="dp" data-role="list-divider" >Double Play</li>
-						<li class="dp"><a href="#game"  data-pitch="dp-grounder-routine" data-fielded-by>Routine DP</a></li>
-						<li class="dp"><a href="#game" data-pitch="dp-grounder-robbed" data-fielded-by>Robbed (Great DP)</a></li>
-						<li class="dp faileddp"><a href="#game" data-pitch="dp-grounder-failed" data-fielded-by>Failed DP</a></li>
+						<li class="dp"><a href="#game"  data-pitch="dp-grounder-routine" data-fielded-by-template>Routine DP</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-grounder-robbed" data-fielded-by-template>Robbed (Great DP)</a></li>
+						<li class="dp faileddp"><a href="#game" data-pitch="dp-grounder-failed" data-fielded-by-template>Failed DP</a></li>
 						<li data-role="list-divider">Other</li>
 						<li data-iconpos="left" data-icon="arrow-l"><a href="#game"  data-direction="reverse">Cancel</a></li>
 					</ul>
@@ -712,20 +712,20 @@
 						<li><a href="#game" data-pitch="double-fly">Hit (Double)</a></li>
 						<li><a href="#game" data-pitch="triple-fly">Hit (Triple)</a></li>
 						<li><a href="#game" data-pitch="homer-fly">Hit (Home Run)</a></li>
-						<li><a href="#game" data-pitch="error-fly" data-fielded-by>Error (Dropped)</a></li>
+						<li><a href="#game" data-pitch="error-fly" data-fielded-by-template>Error (Dropped)</a></li>
 						<li data-role="list-divider">Out</li>
 						<li class="ceiling"><a href="#game" data-pitch="out-fly-ceiling">Ceiling (Out)</a></li>
-						<li><a href="#game" data-pitch="out-fly-caught" data-fielded-by>Caught (Out)</a></li>
-						<li><a href="#game" data-pitch="out-fly-robbed" data-fielded-by>Robbed (Out)</a></li>
+						<li><a href="#game" data-pitch="out-fly-caught" data-fielded-by-template>Caught (Out)</a></li>
+						<li><a href="#game" data-pitch="out-fly-robbed" data-fielded-by-template>Robbed (Out)</a></li>
 						<li class="sac" data-role="list-divider">Sac Fly</li>
 						<li class="sac"><a href="#game" data-pitch="sac-fly-ceiling">Ceiling (Sac Fly, Out)</a></li>
-						<li class="sac"><a href="#game" data-pitch="sac-fly-caught" data-fielded-by>Caught (Sac Fly, Out)</a></li>
-						<li class="sac"><a href="#game" data-pitch="sac-fly-robbed" data-fielded-by>Robbed (Sac Fly, Out)</a></li>
-						<li class="sac"><a href="#game" data-pitch="sac-fly-failed" data-fielded-by>Failed Sac Fly (2 Outs - Furthest Runner Out)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-caught" data-fielded-by-template>Caught (Sac Fly, Out)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-robbed" data-fielded-by-template>Robbed (Sac Fly, Out)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-failed" data-fielded-by-template>Failed Sac Fly (2 Outs - Furthest Runner Out)</a></li>
 						<li class="dp" data-role="list-divider" data-theme="a">Double play</li>
-						<li class="dp"><a href="#game" data-pitch="dp-fly-caught" data-fielded-by>Caught (Routine DP)</a></li>
-						<li class="dp"><a href="#game" data-pitch="dp-fly-robbed" data-fielded-by>Robbed (Great DP)</a></li>
-						<li class="dp faileddp"><a href="#game" data-pitch="dp-fly-failed" data-fielded-by>Failed DP (1 Out - Runners Advance)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-fly-caught" data-fielded-by-template>Caught (Routine DP)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-fly-robbed" data-fielded-by-template>Robbed (Great DP)</a></li>
+						<li class="dp faileddp"><a href="#game" data-pitch="dp-fly-failed" data-fielded-by-template>Failed DP (1 Out - Runners Advance)</a></li>
 						<li data-role="list-divider" >Other</li>
 						<li data-iconpos="left" data-icon="arrow-l"><a href="#game"  data-direction="reverse">Cancel</a></li>
 					</ul>
@@ -738,18 +738,18 @@
 						<li><a href="#game" data-pitch="double-linedrive">Hit (Double)</a></li>
 						<li><a href="#game" data-pitch="triple-linedrive">Hit (Triple)</a></li>
 						<li><a href="#game" data-pitch="homer-linedrive">Hit (Home Run)</a></li>
-						<li><a href="#game" data-pitch="single-linedrive" data-fielded-by>Knocked Down (Single)</a></li>
+						<li><a href="#game" data-pitch="single-linedrive" data-fielded-by-template>Knocked Down (Single)</a></li>
 						<li data-role="list-divider" >Out</li>
-						<li><a href="#game" data-pitch="out-linedrive-caught" data-fielded-by>Caught (Out)</a></li>
-						<li><a href="#game" data-pitch="out-linedrive-robbed" data-fielded-by>Robbed (Great Catch - Out)</a></li>
+						<li><a href="#game" data-pitch="out-linedrive-caught" data-fielded-by-template>Caught (Out)</a></li>
+						<li><a href="#game" data-pitch="out-linedrive-robbed" data-fielded-by-template>Robbed (Great Catch - Out)</a></li>
 						<li class="sac" data-role="list-divider" >Sac Fly</li>
-						<li class="sac"><a href="#game" data-pitch="sac-linedrive-caught" data-fielded-by>Caught (Out, Sac Fly)</a></li>
-						<li class="sac"><a href="#game" data-pitch="sac-linedrive-robbed" data-fielded-by>Robbed (Great Catch, Out, Sac Fly)</a></li>
-						<li class="sac"><a href="#game" data-pitch="sac-linedrive-failed" data-fielded-by>Failed Sac Fly (2 outs - Furthest Runner Out)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-linedrive-caught" data-fielded-by-template>Caught (Out, Sac Fly)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-linedrive-robbed" data-fielded-by-template>Robbed (Great Catch, Out, Sac Fly)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-linedrive-failed" data-fielded-by-template>Failed Sac Fly (2 outs - Furthest Runner Out)</a></li>
 						<li class="dp" data-role="list-divider" data-theme="a">Double Play</li>
-						<li class="dp"><a href="#game" data-pitch="dp-linedrive-caught" data-fielded-by>Caught (Routine DP)</a></li>
-						<li class="dp"><a href="#game" data-pitch="dp-linedrive-robbed" data-fielded-by>Robbed (Great DP)</a></li>
-						<li class="dp faileddp"><a href="#game" data-pitch="dp-linedrive-failed" data-fielded-by>Failed DP (1 Out - Runners Advance)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-linedrive-caught" data-fielded-by-template>Caught (Routine DP)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-linedrive-robbed" data-fielded-by-template>Robbed (Great DP)</a></li>
+						<li class="dp faileddp"><a href="#game" data-pitch="dp-linedrive-failed" data-fielded-by-template>Failed DP (1 Out - Runners Advance)</a></li>
 						<li data-role="list-divider" >Other</li>
 						<li data-iconpos="left" data-icon="arrow-l"><a href="#game"  data-direction="reverse">Cancel</a></li>
 					</ul></li>

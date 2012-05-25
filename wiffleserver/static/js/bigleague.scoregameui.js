@@ -977,9 +977,11 @@
 		if(!setupFieldersRunning)
 		{
 			setupFieldersRunning=true;
-			var fielded = $("li:has(a[data-fielded-by])");
-			fielded.find("a[data-fielded-by]").attr("data-fielded-by","");
-			fielded.find("span.fieldedby").remove();
+			var fielded = $("li:has(a[data-fielded-by-template])");
+			fielded.show();
+			//fielded.find("a[data-fielded-by]").attr("data-fielded-by","");
+			//fielded.find("span.fieldedby").remove();
+			/*
 			for(var i=fielded.length; i>=0; i--) // clear previous fielders
 			{
 				var pitch = fielded.eq(i).find("a[data-fielded-by]").attr("data-pitch");
@@ -992,24 +994,34 @@
 					fielded = $("li:has(a[data-fielded-by])");
 				}
 			}
+			*/
 			//return;
+			var changemade=false;
 			var teamfielding = getCurrentTeamFielding();
 			for(var i=0; i<fielded.length; i++) // dupe fielding items for each fielder
 			{
 				var item = fielded.eq(i);
-				for(var j=1; j<teamfielding.players.length; j++)
+				for(var j=0; j<teamfielding.players.length; j++)
 				{
-					var newi = item.clone();
-					newi.find("a[data-fielded-by]").attr("data-fielded-by",teamfielding.players[j].name)
-						.append("<span class='fieldedby'> By "+teamfielding.players[j].name+"</span>");
-					
-					item.after(newi);
+					if(item.parent().find("[data-fielded-id='"+item.find("a[data-pitch]").attr("data-pitch")+"-"+teamfielding.players[j].name+"-"+teamfielding.name+"']").size()==0)
+					{
+						var newi = item.clone();
+						newi.find("a[data-fielded-by-template]").attr("data-fielded-by",teamfielding.players[j].name)
+							.attr("data-fielded-by-team",teamfielding.name)
+							.attr("data-fielded-id",item.find("a[data-pitch]").attr("data-pitch")+"-"+teamfielding.players[j].name+"-"+teamfielding.name)
+							.append("<span class='fieldedby'> By "+teamfielding.players[j].name+"</span>").removeAttr("data-fielded-by-template");
+						
+						item.after(newi);
+						changemade=true;
+					}
 				}
-					item.find("a[data-fielded-by]").attr("data-fielded-by",teamfielding.players[0].name)
-						.append("<span class='fieldedby'> By "+teamfielding.players[0].name+"</span>");
 			}
 			
-			$("#game ul.inplay").listview("refresh");
+			$("li:has(a[data-fielded-by-team='"+teamfielding.name+"'])").show();
+			$("li:has(a[data-fielded-by-team='"+getCurrentTeamBatting().name+"'])").hide();
+			fielded.hide();
+			if(changemade)
+				$("#game ul.inplay").listview("refresh");
 			setupFieldersRunning=false;
 		}
 	}
