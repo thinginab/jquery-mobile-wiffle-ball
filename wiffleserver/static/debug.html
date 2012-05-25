@@ -1,0 +1,856 @@
+﻿<!DOCTYPE html>
+<html>
+<!-- <html manifest="main.manifest"> -->
+<head>
+    <title>Big League</title>
+	<script type="text/javascript">
+	try
+	{
+		if(window.navigator.onLine)
+		{
+		  // ensure a trailing slash to make sure 'load' and 'save' relative urls work properly
+		  if( (window.location.protocol==="http" || window.location.protocol==="https") &&
+				window.location.pathname.substr(-1) != "/" ) 
+		  {
+				if(window.location.href.indexOf("#")===-1)
+				{
+					window.location.href = window.location.href+"/";
+				}
+				else
+				{
+					window.location.href = window.location.href.substring(0, window.location.href.indexOf("#"))+
+						"/"+	window.location.href.substring(window.location.href.indexOf("#"));
+				}
+			}
+		}
+	}
+	catch(exc){}
+	</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0">
+	<link rel="apple-touch-icon" href="images/blwb_icon.png" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <link rel="apple-touch-startup-image" href="images/blwb_banner.png" />
+	<link rel="icon" href="images/favicon.png" type="image/x-icon">
+	<link rel="shortcut icon" href="images/favicon.png" type="image/x-icon">
+	<link rel="stylesheet" href="css/all.css" />
+	
+	<!--
+	<link rel="stylesheet" href="css/themes/pepper-grinder/jquery-ui-1.8.18.custom.css" />
+	<link rel="stylesheet" href="css/themes/BLWB.min.css" />
+    <link rel="stylesheet" href="css/jquery.mobile.structure-1.1.0-rc.1.min.css" />
+	<link rel="stylesheet" href="css/jqm.simpledialog.css" />
+	<link rel="stylesheet" href="css/main.css" />
+	-->
+	<!--
+    <script type="text/javascript" src="js/all.js"></script>
+	 -->
+    <script type="text/javascript" src="js/jquery-1.7.2.js"></script>
+    <script type="text/javascript" src="js/jquery-ui-1.8.20.custom.js"></script>
+    <script type="text/javascript" src="js/jquery.ui.touch-punch.js"></script>
+	<script type="text/javascript" src="js/jquery.mobile-1.1.0.js"></script>
+	<script type="text/javascript" src="js/jquery.tablesorter.js"></script>
+	<script type="text/javascript" src="js/overthrow.0.1.0.js"></script>
+	<script type="text/javascript" src="js/bigleague.config.js"></script>
+	<script type="text/javascript" src="js/bigleague.recreate.js"></script>
+	<script type="text/javascript" src="js/bigleague.stats.js"></script>
+	<script type="text/javascript" src="js/bigleague.classes.js"></script>
+	<script type="text/javascript" src="js/bigleague.scoregameui.js"></script>
+	<script type="text/javascript" src="js/bigleague.newgame.js"></script>
+	<script type="text/javascript" src="js/bigleague.home.js"></script>
+	<script type="text/javascript" src="js/bigleague.gamelist.js"></script>
+	<script type="text/javascript" src="js/bigleague.scoregamelogic.js"></script>
+	<script type="text/javascript" src="js/bigleague.gamestats.js"></script>
+	<script type="text/javascript" src="js/bigleague.seasonstats.js"></script>
+	<script type="text/javascript" src="js/bigleague.main.js"></script>
+	
+	<script type="text/javascript">
+	   try{
+		  if(window.navigator.onLine)
+		  {
+			  var _gaq = _gaq || [];
+			  _gaq.push(['_setAccount', 'UA-29289442-1']);
+			  _gaq.push(['_trackPageview']);
+
+			  (function() {
+				var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+				ga.src = ('https:' === document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+				var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+			  })();
+		  }
+	  }catch(exc){}
+
+	</script>
+</head>
+<body data-theme="a">
+	<div data-role="page" id="home" data-theme="a">
+		<div data-role="header">
+			<h1>Big League</h1>
+		</div>
+		<div data-role="content">
+			<a href="#newgame" data-role="button" data-icon="plus">Score A New Game</a>
+			<a href="#continue" data-role="button" data-icon="arrow-r" data-iconpos="right">Continue A Game</a>
+			<a href="#stats" data-role="button" data-icon="arrow-r" data-iconpos="right">View Game Stats</a>
+			<a href="#config" data-role="button" data-icon="arrow-r" data-iconpos="right">Modify Game Rules</a>
+		</div>
+	</div>
+	<div data-role="page" id="config" data-theme="a">
+        <div data-role="header">
+            <h1>
+                Modify Game Rules</h1>
+			<a href="#home" data-icon="arrow-l" data-iconpos="notext"  data-direction="reverse" >Back</a>
+			<a href="#home" data-icon="home" data-iconpos="notext" data-direction="reverse" >Home</a>
+		</div>
+		<div data-role="content">
+			<form id="configform">
+				<div>
+					By default, the rules follow the official BLWB rules <a href="http://www.bigleaguewiffleball.com/rules.html" target="_blank">here</a>.  If
+				your league uses something different, feel free to modify them below.
+				</div>
+				<div>
+					<div data-role="fieldcontain">
+						<label for="ballsForWalk" >Balls For Walk:</label>
+						<input data-theme="b"  type="number" min="1" max="100"  name="ballsForWalk" id="ballsForWalk" value="" placeholder="Balls For Walk" />
+					</div>
+					<div data-role="fieldcontain">
+						<label for="startingBalls" >Starting Ball Count:</label>
+						<input data-theme="b"  type="number" min="0" max="100"  name="startingBalls" id="startingBalls" value="" placeholder="Starting Ball Count" />
+					</div>
+					<div data-role="fieldcontain">
+						<label for="strikesForK" >Strikes For Strikeout:</label>
+						<input data-theme="b"  type="number" min="1" max="100"  name="strikesForK" id="strikesForK" value="" placeholder="Strikes For Strikeout" />
+					</div>
+					<div data-role="fieldcontain">
+						<label for="startingStrikes" >Starting Strike Count:</label>
+						<input data-theme="b"  type="number" min="0" max="100"  name="startingStrikes" id="startingStrikes" value="" placeholder="Starting Strike Count" />
+					</div>
+					<div data-role="fieldcontain">
+						<label for="twoStrikeFouls" >Fouls For Foul Out (-1 for disabled):</label>
+						<input data-theme="b"  type="number" min="-1" max="100"  name="twoStrikeFouls" id="twoStrikeFouls" value="" placeholder="Fouls For Foul Out" />
+					</div>
+					<div data-role="fieldcontain">
+						<label for="outsPerInning" >Outs Per Half Inning:</label>
+						<input data-theme="b"  type="number" min="1" max="100"  name="outsPerInning" id="outsPerInning" value="" placeholder="Outs Per Half Inning" />
+					</div>
+					<div data-role="fieldcontain">
+						<label for="inningsPerGame" >Default Innings Per Game:</label>
+						<input data-theme="b"  type="number" min="1" max="100"  name="inningsPerGame" id="inningsPerGame" value="" placeholder="Default Innings Per Game" />
+					</div>
+					<div data-role="fieldcontain">
+						<label for="extraInningRunners" >Extra Inning Starting Runners:</label>
+						<input data-theme="b"  type="number" min="0" max="100"  name="extraInningRunners" id="extraInningRunners" value="" placeholder="Extra Inning Starting Runners" />
+					</div>
+					<div data-role="fieldcontain">
+						<label for="maxTeamPlayers" >Maximum Players Per Team:</label>
+						<input data-theme="b"  type="number" min="1" max="15"  name="maxTeamPlayers" id="maxTeamPlayers" value="" placeholder="Maximum Players Per Team" />
+					</div>
+					<div data-role="fieldcontain">
+						<label for="halfInningSkip">Allow "Skip To Next Half Inning":</label>
+						<select name="halfInningSkip" id="halfInningSkip" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="overSpeedWalk">"Over Pitch Speed" Rules:</label>
+						<select name="overSpeedWalk" id="overSpeedWalk" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="autoPitcherChange">Rotate Pitcher Every Inning:</label>
+						<select name="autoPitcherChange" id="autoPitcherChange" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="flySingles">Fly Ball Singles:</label>
+						<select name="flySingles" id="flySingles" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="lineSingles">Line Drive Singles:</label>
+						<select name="slider" id="lineSingles" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="sacFlys">Sacrifice Flys:</label>
+						<select name="sacFlys" id="sacFlys" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="doublePlayOnFly">Double Play on Fly Ball:</label>
+						<select name="doublePlayOnFly" id="doublePlayOnFly" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="doublePlayOnLine">Double Play on Line Drive:</label>
+						<select name="doublePlayOnLine" id="doublePlayOnLine" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="pushRunnersOnHit">Runners advance 2 bases on double etc. (off = only when forced):</label>
+						<select name="pushRunnersOnHit" id="pushRunnersOnHit" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="doublePlayRunnersRequired">Runner on First Required for Double Play:</label>
+						<select name="doublePlayRunnersRequired" id="doublePlayRunnersRequired" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="doublePlayRemovesAdditionalRunner">Double Play Removes a Base Runner:</label>
+						<select name="doublePlayRemovesAdditionalRunner" id="doublePlayRemovesAdditionalRunner" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+					<div data-role="fieldcontain">
+						<label for="doublePlayAdvanceOnFailed">Runners Advance on Failed Double Play:</label>
+						<select name="doublePlayAdvanceOnFailed" id="doublePlayAdvanceOnFailed" data-role="slider" data-mini="true" >
+							<option value="off">Off</option>
+							<option value="on">On</option>
+						</select> 
+					</div>
+				</div>
+				<fieldset class="ui-grid-a">
+					<div class="ui-block-a"><a href="#home" data-role="button" data-theme="b">Cancel</a></div>
+					<div class="ui-block-b"><button type="submit"  data-theme="a">Save Changes</button></div>
+				</fieldset>
+				<input type="hidden" name="configaction" />
+			</form>
+		</div>
+	</div>
+	<div data-role="page" id="continue" data-theme="a">
+        <div data-role="header">
+            <h1>
+                Continue Game</h1>
+			<a href="#home" data-icon="arrow-l" data-iconpos="notext"  data-direction="reverse" >Back</a>
+			<a href="#home" data-icon="home" data-iconpos="notext" data-direction="reverse" >Home</a>
+        </div>
+        <div data-role="content">
+            <ul data-role="listview">
+			</ul>
+		</div>
+	</div>
+	<div data-role="page" id="stats" data-theme="a">
+        <div data-role="header">
+            <h1>
+                Stats</h1>
+			<a href="#home" data-icon="arrow-l" data-iconpos="notext" data-direction="reverse" >Back</a>
+			<a href="#home" data-icon="home" data-iconpos="notext" data-direction="reverse" >Home</a>
+        </div>
+        <div data-role="content">
+            <ul data-role="listview">
+			</ul>
+		</div>
+	</div>
+	<div data-role="page" id="newgame" data-theme="a">
+        <div data-role="header">
+            <h1>
+                Start New Game</h1>
+			<a href="#home" data-icon="arrow-l" data-iconpos="notext"  data-direction="reverse" >Back</a>
+			<a href="#home" data-icon="home" data-iconpos="notext" data-direction="reverse" >Home</a>
+        </div>
+        <div data-role="content">
+			<form id="newgameform">
+				<div data-role="fieldcontain">
+					<label for="innings" >Game Length (Innings):</label>
+					<input data-theme="b" type="number" min="1" max="100" name="innings" id="innings" value="" placeholder="Regular Innings" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="team1" class="ui-hidden-accessible">Home Team:</label>
+					<input data-theme="b" type="text" name="team1" id="team1" value="" placeholder="Home Team" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player1" class="ui-hidden-accessible">Player 1:</label>
+					<input data-theme="b" type="text" name="player1" id="player1" value="" placeholder="Player 1" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player2" class="ui-hidden-accessible">Player 2</label>
+					<input data-theme="b" type="text" name="player2" id="player2" value="" placeholder="Player 2" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player3" class="ui-hidden-accessible">Player 3:</label>
+					<input data-theme="b" type="text" name="player3" id="player3" value="" placeholder="Player 3" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player4" class="ui-hidden-accessible">Player 4:</label>
+					<input data-theme="b" type="text" name="player4" id="player4" value="" placeholder="Player 4" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player5" class="ui-hidden-accessible">Player 5:</label>
+					<input data-theme="b" type="text" name="player5" id="player5" value="" placeholder="Player 5" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player6" class="ui-hidden-accessible">Player 6:</label>
+					<input data-theme="b" type="text" name="player6" id="player6" value="" placeholder="Player 6" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player7" class="ui-hidden-accessible">Player 7:</label>
+					<input data-theme="b" type="text" name="player7" id="player7" value="" placeholder="Player 7" />
+				</div>	
+				<div data-role="fieldcontain">
+					<label for="player8" class="ui-hidden-accessible">Player 8:</label>
+					<input data-theme="b" type="text" name="player8" id="player8" value="" placeholder="Player 8" />
+				</div>			
+				<div data-role="fieldcontain">
+					<label for="player9" class="ui-hidden-accessible">Player 9:</label>
+					<input data-theme="b" type="text" name="player9" id="player9" value="" placeholder="Player 9" />
+				</div>	
+				<div data-role="fieldcontain">
+					<label for="player10" class="ui-hidden-accessible">Player 10:</label>
+					<input data-theme="b" type="text" name="player10" id="player10" value="" placeholder="Player 10" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player11" class="ui-hidden-accessible">Player 11:</label>
+					<input data-theme="b" type="text" name="player11" id="player11" value="" placeholder="Player 11" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player12" class="ui-hidden-accessible">Player 12:</label>
+					<input data-theme="b" type="text" name="player12" id="player12" value="" placeholder="Player 12" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player13" class="ui-hidden-accessible">Player 13:</label>
+					<input data-theme="b" type="text" name="player13" id="player13" value="" placeholder="Player 13" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player14" class="ui-hidden-accessible">Player 14:</label>
+					<input data-theme="b" type="text" name="player14" id="player14" value="" placeholder="Player 14" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player15" class="ui-hidden-accessible">Player 15:</label>
+					<input data-theme="b" type="text" name="player15" id="player15" value="" placeholder="Player 15" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="team2" class="ui-hidden-accessible">Away Team:</label>
+					<input data-theme="b" type="text" name="team2" id="team2" value="" placeholder="Away Team" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player1_2" class="ui-hidden-accessible">Player 1:</label>
+					<input data-theme="b" type="text" name="player1_2" id="player1_2" value="" placeholder="Player 1" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player2_2" class="ui-hidden-accessible">Player 2</label>
+					<input data-theme="b" type="text" name="player2_2" id="player2_2" value="" placeholder="Player 2" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player3_2" class="ui-hidden-accessible">Player 3:</label>
+					<input data-theme="b" type="text" name="player3_2" id="player3_2" value="" placeholder="Player 3" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player4_2" class="ui-hidden-accessible">Player 4:</label>
+					<input data-theme="b" type="text" name="player4_2" id="player4_2" value="" placeholder="Player 4" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player5_2" class="ui-hidden-accessible">Player 5:</label>
+					<input data-theme="b" type="text" name="player5_2" id="player5_2" value="" placeholder="Player 5" />
+				</div>
+				
+				<div data-role="fieldcontain">
+					<label for="player6_2" class="ui-hidden-accessible">Player 6:</label>
+					<input data-theme="b" type="text" name="player6_2" id="player6_2" value="" placeholder="Player 6" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player7_2" class="ui-hidden-accessible">Player 7:</label>
+					<input data-theme="b" type="text" name="player7_2" id="player7_2" value="" placeholder="Player 7" />
+				</div>	
+				<div data-role="fieldcontain">
+					<label for="player8_2" class="ui-hidden-accessible">Player 8:</label>
+					<input data-theme="b" type="text" name="player8_2" id="player8_2" value="" placeholder="Player 8" />
+				</div>			
+				<div data-role="fieldcontain">
+					<label for="player9_2" class="ui-hidden-accessible">Player 9:</label>
+					<input data-theme="b" type="text" name="player9_2" id="player9_2" value="" placeholder="Player 9" />
+				</div>	
+				<div data-role="fieldcontain">
+					<label for="player10_2" class="ui-hidden-accessible">Player 10:</label>
+					<input data-theme="b" type="text" name="player10_2" id="player10_2" value="" placeholder="Player 10" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player11_2" class="ui-hidden-accessible">Player 11:</label>
+					<input data-theme="b" type="text" name="player11_2" id="player11_2" value="" placeholder="Player 11" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player12_2" class="ui-hidden-accessible">Player 12:</label>
+					<input data-theme="b" type="text" name="player12_2" id="player12_2" value="" placeholder="Player 12" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player13_2" class="ui-hidden-accessible">Player 13:</label>
+					<input data-theme="b" type="text" name="player13_2" id="player13_2" value="" placeholder="Player 13" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player14_2" class="ui-hidden-accessible">Player 14:</label>
+					<input data-theme="b" type="text" name="player14_2" id="player14_2" value="" placeholder="Player 14" />
+				</div>
+				<div data-role="fieldcontain">
+					<label for="player15_2" class="ui-hidden-accessible">Player 15:</label>
+					<input data-theme="b" type="text" name="player15_2" id="player15_2" value="" placeholder="Player 15" />
+				</div>
+				<fieldset class="ui-grid-a">
+					<div class="ui-block-a"><a href="#home" data-role="button" data-theme="b">Cancel</a></div>
+					<div class="ui-block-b"><button type="submit"  data-theme="a">Submit</button></div>
+				</fieldset>
+				<input type="hidden" name="createaction" />
+			</form>
+		</div>
+	</div>
+	<div data-role="dialog" id="changepitcher" >
+        <div data-role="header" data-theme="a">
+			<h1>New Pitcher?</h1>
+		</div>
+        <div data-role="content">
+			<ul id='newpitcher' data-role='listview' data-theme='a'></ul>
+		</div>
+	</div>
+	<div data-role="dialog" id="changebatter" data-theme="a">
+        <div data-role="header" class="ui-bar-a">
+			<h1>New Batter?</h1>
+		</div>
+        <div data-role="content">
+			<ul id='newbatter' data-role='listview' data-theme='a'></ul>
+		</div>
+	</div>
+	<div data-role="dialog" id="setseason" data-theme="a">
+        <div data-role="header" class="ui-bar-a">
+			<h1>League/Season name?</h1>
+		</div>
+        <div data-role="content">
+			<div data-role="fieldcontain">
+				<label for="seasonName" class="ui-hidden-accessible">Season name:</label>
+				<input data-theme="b" type="text" name="seasonName" id="seasonName" value="" placeholder="Season name" />
+			</div>
+			<button id="saveseason" type="submit"  data-theme="a">Save</button>
+		</div>
+	</div>
+	<div data-role="dialog" id="baserunning" data-theme="a">
+        <div data-role="header" class="ui-bar-a">
+			<h1>Baserunning</h1>
+		</div>
+        <div data-role="content">
+			<div class="baserunner-container">
+				<h3>Out:</h3>
+				<ul class="baserunner" id="runnersout"></ul>
+			</div>
+			<div class="baserunner-container">
+				<h3>1st:</h3>
+				<ul class="baserunner" id="runner_1" data-base="0"></ul>
+			</div>
+			<div class="baserunner-container">
+				<h3>2nd:</h3>
+				<ul class="baserunner" id="runner_2" data-base="1"></ul>
+				</div>
+			<div class="baserunner-container">
+				<h3>3rd:</h3>
+				<ul class="baserunner" id="runner_3" data-base="2"></ul>
+				</div>
+			<div class="baserunner-container">
+				<h3>Scored:</h3>
+				<ul class="baserunner" id="runnersscored"></ul>
+			</div>
+			<br class="clear" />
+			<button id="saverunners" type="submit"  data-theme="a">Save</button>
+		</div>
+	</div>
+	<div data-role="dialog" id="skipHalfInningDialog" data-theme="a">
+        <div data-role="header" class="ui-bar-a">
+			<h1>Runs Scored?</h1>
+		</div>
+        <div data-role="content">
+			<div data-role="fieldcontain">
+				<label for="runsScored" class="ui-hidden-accessible">Runs Scored:</label>
+				<input data-theme="b" type="number"  min="0" max="100" name="runsScored" id="runsScored" value="" placeholder="Runs Scored" />
+			</div>
+			<button id="setrunsscoredandskip" type="submit"  data-theme="a">Skip</button>
+		</div>
+	</div>
+    <div data-role="page" id="game" data-theme="a">
+        <div data-role="header">
+            <h1>
+                Score Game</h1>
+			<a href="#continue" id="goback" data-icon="arrow-l" data-iconpos="notext"  data-direction="reverse" >Back</a>
+			<a href="#home" id="gohome" data-icon="home" data-iconpos="notext" data-direction="reverse" >Home</a>
+        </div>
+        <div data-role="content">
+			<div id="widescore">
+				<div id="widescore_top">
+					<div class="ui-grid-b">
+						<div class="ui-block-a">
+							<div class="ui-grid-a">
+								<div class="ui-block-a">
+									<table class="grid batter">
+										<thead><tr><th>At&nbsp;Bat</th></tr></thead>
+										<tbody><tr><td><span id="batter"></span></td></tr></tbody>
+									</table>
+								</div>
+								<div class="ui-block-b">
+									<table id="batterstats" class="grid">
+										<thead>
+											<tr>
+												<th id="batterhits_h">H</th>
+												<th id="batterabs_h">AB</th>
+												<th id="batterwalks_h">W</th>
+												<th id="batterrbi_h">RBI</th>
+											</tr>
+										</thead>
+										<tbody>
+											<tr>
+												<td id="batterhits">0</td>
+												<td id="batterabs">0</td>
+												<td id="batterwalks">0</td>
+												<td id="batterrbi">0</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+						<div class="ui-block-b">
+							<div class="ui-grid-b">
+								<div class="ui-block-a">
+									<table class="grid">
+										<thead><tr><th>Balls</th></tr></thead>
+										<tbody><tr><td><span id="balls"></span></td></tr></tbody>
+									</table>
+								</div>
+								<div class="ui-block-b">
+									<table class="grid">
+										<thead><tr><th>Strikes</th></tr></thead>
+										<tbody><tr><td><span id="strikes"></span></td></tr></tbody>
+									</table>
+								</div>
+								<div class="ui-block-c">
+									<table class="grid">
+										<thead><tr><th>Outs</th></tr></thead>
+										<tbody><tr><td><span id="outs"></span></td></tr></tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+						<div class="ui-block-c">
+							<div class="ui-grid-a">
+								<div class="ui-block-a">
+									<table class="grid pitcher">
+										<thead><tr><th>Pitcher</th></tr></thead>
+										<tbody><tr><td><span id="pitcher"></span></td></tr></tbody>
+									</table>
+								</div>
+								<div class="ui-block-b">
+									<table id="pitcherstats" class="grid">
+										<thead>
+											<tr>
+												<th id="pitcherhits_h">H</th>
+												<th id="pitcherwalks_h">W</th>
+												<th id="pitcherstrikeouts_h">K</th>
+												<th id="pitcherruns_h">R</th>
+											</tr>
+										</thead>
+										<tbody>
+											<tr>
+												<td id="pitcherhits">0</td>
+												<td id="pitcherwalks">0</td>
+												<td id="pitcherstrikeouts">0</td>
+												<td id="pitcherruns">0</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<p>&nbsp;</p>
+				<div id="widescore_bottom">
+					<div class="ui-grid-b">
+						<div class="ui-block-a">
+							<table id="gameboxscore" class="grid">
+								<thead>
+								</thead>
+								<tbody>
+								</tbody>
+							</table>
+						</div>
+						<div class="ui-block-c">
+							<canvas id="basePath" width="1" height="1" >
+								<div><strong>1st:</strong> <span id="first"></span></div>
+								<div><strong>2nd:</strong> <span id="second"></span></div>
+								<div><strong>3rd:</strong> <span id="third"></span></div>
+							</canvas>
+						</div>
+					</div>
+				</div>
+				<p>&nbsp;</p>
+				<p>&nbsp;</p>
+				<p>&nbsp;</p>
+			</div>
+			<div id="narrowscore" style="display:none;">
+				<div class="ui-grid-b">
+					<div class="ui-block-a scores">
+						<table class="grid">
+							<thead><tr><th id="hometeam">Home</th></tr></thead>
+							<tbody><tr><td id="homescore"></td></tr></tbody>
+						</table>
+						<div>&nbsp;</div>
+						<table class="grid">
+							<thead><tr><th id="awayteam">Away</th></tr></thead>
+							<tbody><tr><td id="awayscore"></td></tr></tbody>
+						</table>
+					</div>
+					<div class="ui-block-b">
+						<table class="grid inning">
+							<thead><tr><th>Inning</th></tr></thead>
+							<tbody><tr><td id="inning_n"></td></tr></tbody>
+						</table>
+						<div>&nbsp;</div>
+						<div>
+							<canvas id="basePath_n" width="1" height="1" >
+								<div><strong>1st:</strong> <span id="first_n"></span></div>
+								<div><strong>2nd:</strong> <span id="second_n"></span></div>
+								<div><strong>3rd:</strong> <span id="third_n"></span></div>
+							</canvas>
+						</div>
+					</div>
+					<div class="ui-block-c">
+						<table class="grid batter">
+							<thead><tr><th>Batter</th></tr></thead>
+							<tbody><tr><td id="batter_n"></td></tr></tbody>
+						</table>
+						<div>
+							<p>&nbsp;</p>
+							<table class="grid count">
+								<thead>
+									<tr>
+										<th>Balls</th><td id="balls_n"></td>
+									</tr>
+									<tr>
+										<th>Strikes</th><td id="strikes_n"></td>
+									</tr>
+									<tr>
+										<th>Outs</th><td id="outs_n"></td>
+									</tr>
+								</thead>
+							</table>
+							<p>&nbsp;</p>
+						</div>
+						<table class="grid pitcher">
+							<thead><tr><th>Pitcher</th></tr></thead>
+							<tbody><tr><td id="pitcher_n"></td></tr></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+			<div id="pitches">
+				<div class="ui-grid-a">
+					<div class="ui-block-a">
+						<a href="#game" data-pitch="called" data-role="button">Called Strike</a>
+					</div>
+					<div class="ui-block-b">
+						<a href="#game" data-pitch="ball" data-role="button">Ball</a>
+					</div>
+				</div>
+				<div class="ui-grid-a">
+					<div class="ui-block-a">
+						<a href="#game" data-pitch="swing" data-role="button">Swing And Miss</a>
+					</div>
+					<div class="ui-block-b">
+						<a href="#game" data-pitch="ball_hbp" data-role="button">Hit By Pitch</a>
+					</div>
+				</div>
+				<div class="ui-grid-a">
+					<div class="ui-block-a">
+						<a href="#game" data-pitch="foul" data-role="button">Foul Ball</a>
+					</div>
+					<div class="ui-block-b">
+						<a href="#game" data-pitch="ball_wp" data-role="button">Wild Pitch</a>
+					</div>
+				</div>
+			</div>
+			<p>&nbsp;</p>
+			<p>&nbsp;</p>
+			<p>&nbsp;</p>
+            <ul data-role="listview" data-theme="a">
+                <li data-role="list-divider" data-theme="a" style="display:none;" id="gameover">Game Over!</li>
+                <li data-role="list-divider" >In Play</li>
+                <li>
+					Ground Ball
+					<ul class="inplay" data-theme="a">
+						<li data-role="list-divider" >Safe</li>
+						<li><a href="#game" data-pitch="single-grounder" >Hit (Single)</a></li>
+						<li><a href="#game" data-pitch="error-grounder" data-fielded-by>Error (Dropped)</a></li>
+						<li data-role="list-divider" >Out</li>
+						<li><a href="#game" data-pitch="out-grounder-routine" data-fielded-by>Routine Catch (Out)</a></li>
+						<li><a href="#game" data-pitch="out-grounder-robbed" data-fielded-by>Robbed (Great Catch - Out)</a></li>
+						<li class="dp" data-role="list-divider" >Double Play</li>
+						<li class="dp"><a href="#game"  data-pitch="dp-grounder-routine" data-fielded-by>Routine DP</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-grounder-robbed" data-fielded-by>Robbed (Great DP)</a></li>
+						<li class="dp faileddp"><a href="#game" data-pitch="dp-grounder-failed" data-fielded-by>Failed DP</a></li>
+						<li data-role="list-divider">Other</li>
+						<li data-iconpos="left" data-icon="arrow-l"><a href="#game"  data-direction="reverse">Cancel</a></li>
+					</ul>
+				</li>
+                <li>
+					Fly Ball
+					<ul class="inplay fly">
+						<li data-role="list-divider" >Safe</li>
+						<li class="single"><a href="#game" data-pitch="single-fly" >Hit (Single)</a></li>
+						<li><a href="#game" data-pitch="double-fly">Hit (Double)</a></li>
+						<li><a href="#game" data-pitch="triple-fly">Hit (Triple)</a></li>
+						<li><a href="#game" data-pitch="homer-fly">Hit (Home Run)</a></li>
+						<li><a href="#game" data-pitch="error-fly" data-fielded-by>Error (Dropped)</a></li>
+						<li data-role="list-divider">Out</li>
+						<li class="ceiling"><a href="#game" data-pitch="out-fly-ceiling">Ceiling (Out)</a></li>
+						<li><a href="#game" data-pitch="out-fly-caught" data-fielded-by>Caught (Out)</a></li>
+						<li><a href="#game" data-pitch="out-fly-robbed" data-fielded-by>Robbed (Out)</a></li>
+						<li class="sac" data-role="list-divider">Sac Fly</li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-ceiling">Ceiling (Sac Fly, Out)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-caught" data-fielded-by>Caught (Sac Fly, Out)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-robbed" data-fielded-by>Robbed (Sac Fly, Out)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-fly-failed" data-fielded-by>Failed Sac Fly (2 Outs - Furthest Runner Out)</a></li>
+						<li class="dp" data-role="list-divider" data-theme="a">Double play</li>
+						<li class="dp"><a href="#game" data-pitch="dp-fly-caught" data-fielded-by>Caught (Routine DP)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-fly-robbed" data-fielded-by>Robbed (Great DP)</a></li>
+						<li class="dp faileddp"><a href="#game" data-pitch="dp-fly-failed" data-fielded-by>Failed DP (1 Out - Runners Advance)</a></li>
+						<li data-role="list-divider" >Other</li>
+						<li data-iconpos="left" data-icon="arrow-l"><a href="#game"  data-direction="reverse">Cancel</a></li>
+					</ul>
+				</li>
+                <li>
+					Line Drive
+					<ul class="inplay linedrive">
+						<li data-role="list-divider" >Safe</li>
+						<li class="single"><a href="#game" data-pitch="single-linedrive" >Hit (Single)</a></li>
+						<li><a href="#game" data-pitch="double-linedrive">Hit (Double)</a></li>
+						<li><a href="#game" data-pitch="triple-linedrive">Hit (Triple)</a></li>
+						<li><a href="#game" data-pitch="homer-linedrive">Hit (Home Run)</a></li>
+						<li><a href="#game" data-pitch="single-linedrive" data-fielded-by>Knocked Down (Single)</a></li>
+						<li data-role="list-divider" >Out</li>
+						<li><a href="#game" data-pitch="out-linedrive-caught" data-fielded-by>Caught (Out)</a></li>
+						<li><a href="#game" data-pitch="out-linedrive-robbed" data-fielded-by>Robbed (Great Catch - Out)</a></li>
+						<li class="sac" data-role="list-divider" >Sac Fly</li>
+						<li class="sac"><a href="#game" data-pitch="sac-linedrive-caught" data-fielded-by>Caught (Out, Sac Fly)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-linedrive-robbed" data-fielded-by>Robbed (Great Catch, Out, Sac Fly)</a></li>
+						<li class="sac"><a href="#game" data-pitch="sac-linedrive-failed" data-fielded-by>Failed Sac Fly (2 outs - Furthest Runner Out)</a></li>
+						<li class="dp" data-role="list-divider" data-theme="a">Double Play</li>
+						<li class="dp"><a href="#game" data-pitch="dp-linedrive-caught" data-fielded-by>Caught (Routine DP)</a></li>
+						<li class="dp"><a href="#game" data-pitch="dp-linedrive-robbed" data-fielded-by>Robbed (Great DP)</a></li>
+						<li class="dp faileddp"><a href="#game" data-pitch="dp-linedrive-failed" data-fielded-by>Failed DP (1 Out - Runners Advance)</a></li>
+						<li data-role="list-divider" >Other</li>
+						<li data-iconpos="left" data-icon="arrow-l"><a href="#game"  data-direction="reverse">Cancel</a></li>
+					</ul></li>
+                <li data-role="list-divider"  id="other">Other</li>
+				<li class="overspeed"><a href="#game" data-pitch="ball_overspeed_walk">Automatic Walk - Over Speed</a></li>
+				<li class="overspeed"><a href="#game" data-pitch="ball_overspeed_run">Automatic Walk And Run - Over Speed #2</a></li>
+                <li id="undoli" data-icon="false"><a href="#game" id="undo">Undo</a></li>
+                <li id="redoli" data-icon="false"><a href="#game" id="redo">Redo</a></li>
+				<li class="halfInningSkip"><a href="#" id="doHalfInningSkip">Skip To Next Half Inning</a></li>
+				<!-- not implemented yet
+                <li><a href="#">Game over (time)</a></li>
+				-->
+				
+                <li data-icon="false" id="server"><a href="#" id="post">Save On Server</a></li>
+                <!--<li data-icon="false"><a href="#" id="output">Output Game</a></li>            
+				-->
+				</ul>
+        </div>
+    </div>
+    <div data-role="page" id="gamestats" class="grid" data-theme="a">
+        <div data-role="header">
+            <h1>Game Stats</h1>
+			<a href="#stats" data-icon="arrow-l" data-iconpos="notext"  data-direction="reverse" >Back</a>
+			<a href="#home" data-icon="home" data-iconpos="notext"  data-direction="reverse" >Home</a>
+        </div>
+        <div data-role="content">
+			<a href="mailto:?subject=Game+Stats&body=test+body" target="_blank" data-role="button" id="gamestatemail">Email These Stats</a>
+			<div class="overthrow">
+				<table id="boxscore" class="grid">
+					<thead>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+			<h3>Batting</h3>
+			<div class="overthrow">
+				<table id="team1batting" class="grid sortable">
+					<thead>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+			<p>&nbsp;</p>
+			<div class="overthrow">
+				<table id="team2batting" class="grid sortable">
+					<thead>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+			<h3>Pitching (Batting Against)</h3>
+			<div class="overthrow">
+				<table id="team1pitching" class="grid sortable">
+					<thead>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+			<p>&nbsp;</p>
+			<div class="overthrow">
+				<table id="team2pitching" class="grid sortable">
+					<thead>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+    <div data-role="page" id="seasonstats" class="grid" data-theme="a">
+        <div data-role="header">
+            <h1>
+                Season Stats</h1>
+			<a href="#stats" data-icon="arrow-l" data-iconpos="notext"  data-direction="reverse" >Back</a>
+			<a href="#home" data-icon="home" data-iconpos="notext" data-direction="reverse" >Home</a>
+        </div>
+        <div data-role="content">
+			<a href="mailto:?subject=Season+Stats&body=test+body" target="_blank" data-role="button" id="seasonstatemail">Email These Stats</a>
+			<h3>Batting</h3>
+			<div class="overthrow">
+				<table id="playerbatting" class="grid sortable">
+					<thead>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+			<h3>Pitching (Batting Against)</h3>
+			<div class="overthrow">
+				<table id="playerpitching" class="grid sortable">
+					<thead>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

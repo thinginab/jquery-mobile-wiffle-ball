@@ -21146,26 +21146,10 @@ $( document ).bind( "pagecreate create", function( e ){
 	enable();
 		
 })( this ); 
-	
-	var oldgame =  null;
-		
-	function recreateGame()
-	{
-		"use strict";
-		for(var hi=0; hi<oldgame.halfinnings.length; hi++)
-		{
-			for(var ab=0; ab<oldgame.halfinnings[hi].atbats.length; ab++)
-			{
-				for(var p=0; p<oldgame.halfinnings[hi].atbats[ab].pitches.length; p++)
-				{
-				//	currentGame.halfinnings[hi].atbats[ab].batter = JSON.parse(JSON.stringify(oldgame.halfinnings[hi].atbats[ab].batter));
-					processPitch(oldgame.halfinnings[hi].atbats[ab].pitches[p], oldgame.halfinnings[hi].atbats[ab].fielder);
-				}
-			}
-		}
-	}
-	
-	var CONFIG =
+
+/**************** bigleague.config.js ****************/
+
+var CONFIG =
 		{
 			ballsForWalk: 5,
 			startingBalls: 0,
@@ -21204,6 +21188,141 @@ $( document ).bind( "pagecreate create", function( e ){
 	var POST_URL = "save";
 	var LOAD_URL = "load";
 	var CLICK_URL = "other/click.mp3";
+	
+	
+	var configinited=false;
+	function configInit() {
+		if(!configinited)
+		{
+			configinited=true;
+			$("#configform").submit(function (e) {
+				
+				CONFIG.ballsForWalk = parseInt($("#ballsForWalk").val());
+				CONFIG.startingBalls = parseInt($("#startingBalls").val());
+				CONFIG.strikesForK = parseInt($("#strikesForK").val());
+				CONFIG.startingStrikes = parseInt($("#startingStrikes").val());
+				CONFIG.twoStrikeFouls = parseInt($("#twoStrikeFouls").val());
+				CONFIG.outsPerInning = parseInt($("#outsPerInning").val());
+				CONFIG.inningsPerGame = parseInt($("#inningsPerGame").val());
+				CONFIG.maxTeamPlayers = parseInt($("#maxTeamPlayers").val());
+				CONFIG.pushRunnersOnHit = $("#pushRunnersOnHit").val()==="on";
+				CONFIG.extraInningRunners = parseInt($("#extraInningRunners").val());
+				CONFIG.overSpeedWalk = $("#overSpeedWalk").val()==="on";
+				CONFIG.halfInningSkip = $("#halfInningSkip").val()==="on";
+				CONFIG.doublePlayOnFly = $("#doublePlayOnFly").val()==="on";
+				CONFIG.doublePlayOnLine = $("#doublePlayOnLine").val()==="on";
+				CONFIG.doublePlayRunnersRequired = $("#doublePlayRunnersRequired").val()==="on";
+				CONFIG.doublePlayRemovesAdditionalRunner = $("#doublePlayRemovesAdditionalRunner").val()==="on";
+				
+				if($("#doublePlayAdvanceOnFailed").val()==="on")
+					CONFIG.doublePlayAdvanceOnFailed = 1;
+				else
+					CONFIG.doublePlayAdvanceOnFailed = 0;
+				CONFIG.autoPitcherChange = $("#autoPitcherChange").val()==="on";
+				CONFIG.flySingles = $("#flySingles").val()==="on";
+				CONFIG.lineSingles = $("#lineSingles").val()==="on";
+				CONFIG.sacFlys = $("#sacFlys").val()==="on";
+				
+				saveConfig();
+				
+				$.mobile.changePage($("#home"),
+						{
+						  changeHash: true,
+						  dataUrl: "#home"
+						});
+				e.preventDefault();
+				return false;
+			});
+		}
+	}
+	
+	
+	function getConfig()
+	{
+		"use strict";
+		if(localStorage["config"]==null)
+			return CONFIG;
+		var config = JSON.parse(localStorage["config"]);
+		if(config.pushRunnersOnHit==null)
+			config.pushRunnersOnHit = true;
+		if(config.startingBalls==null)
+			config.startingBalls = 0;
+		if(config.startingStrikes==null)
+			config.startingStrikes = 0;
+		if(config.halfInningSkip==null)
+			config.halfInningSkip = true;
+		return config;
+    }
+	function saveConfig()
+	{
+		"use strict";
+		localStorage["config"] = JSON.stringify(CONFIG);
+	}
+	
+	function bindConfig()
+	{
+		"use strict";
+		if($("#config:visible").length==0)
+			return;
+		if(!savedgamesloaded)
+		{
+			setTimeout(bindConfig,100);
+			return;
+		}
+		CONFIG = getConfig();
+		
+		$("#ballsForWalk").val(CONFIG.ballsForWalk);
+		$("#startingBalls").val(CONFIG.startingBalls);
+		$("#strikesForK").val(CONFIG.strikesForK);
+		$("#startingStrikes").val(CONFIG.startingStrikes);
+		$("#twoStrikeFouls").val(CONFIG.twoStrikeFouls);
+		$("#outsPerInning").val(CONFIG.outsPerInning);
+		$("#inningsPerGame").val(CONFIG.inningsPerGame);
+		$("#maxTeamPlayers").val(CONFIG.maxTeamPlayers);
+		setToggleOption("#pushRunnersOnHit", CONFIG.pushRunnersOnHit);
+		$("#extraInningRunners").val(CONFIG.extraInningRunners);
+		setToggleOption("#halfInningSkip", CONFIG.halfInningSkip);
+		setToggleOption("#overSpeedWalk", CONFIG.overSpeedWalk);
+		setToggleOption("#doublePlayOnFly", CONFIG.doublePlayOnFly);
+		setToggleOption("#doublePlayOnLine", CONFIG.doublePlayOnLine);
+		setToggleOption("#doublePlayRunnersRequired", CONFIG.doublePlayRunnersRequired);
+		setToggleOption("#doublePlayRemovesAdditionalRunner", CONFIG.doublePlayRemovesAdditionalRunner);
+		setToggleOption("#doublePlayAdvanceOnFailed", CONFIG.doublePlayAdvanceOnFailed>0);
+		setToggleOption("#autoPitcherChange", CONFIG.autoPitcherChange);
+		setToggleOption("#flySingles", CONFIG.flySingles);
+		setToggleOption("#lineSingles", CONFIG.lineSingles);
+		setToggleOption("#sacFlys", CONFIG.sacFlys);
+		
+		
+		setTimeout(function(){	
+			hidePageLoadingMsg();
+		},CONFIG.clearDelay);
+	}
+ 
+
+/**************** bigleague.recreate.js ****************/
+
+	var oldgame =  null;
+		
+	function recreateGame()
+	{
+		"use strict";
+		for(var hi=0; hi<oldgame.halfinnings.length; hi++)
+		{
+			for(var ab=0; ab<oldgame.halfinnings[hi].atbats.length; ab++)
+			{
+				for(var p=0; p<oldgame.halfinnings[hi].atbats[ab].pitches.length; p++)
+				{
+				//	currentGame.halfinnings[hi].atbats[ab].batter = JSON.parse(JSON.stringify(oldgame.halfinnings[hi].atbats[ab].batter));
+					processPitch(oldgame.halfinnings[hi].atbats[ab].pitches[p], oldgame.halfinnings[hi].atbats[ab].fielder);
+				}
+			}
+		}
+	}
+	 
+
+/**************** bigleague.stats.js ****************/
+	
 	
 	function getTeamScore(game,team)
 	{
@@ -21463,7 +21582,7 @@ $( document ).bind( "pagecreate create", function( e ){
 						
 					var outcome = game.halfinnings[i].atbats[j].pitches[game.halfinnings[i].atbats[j].pitches.length-1];
 					
-					if(outcome.indexOf("-skip")===-1) //don't count inning skips for/against player stats
+					if(outcome!=null && outcome.indexOf("-skip")===-1) //don't count inning skips for/against player stats
 					{
 						if(isbatter && game.halfinnings[i].atbats[j].batter.name===player &&
 							regex.test(outcome) )
@@ -21518,7 +21637,7 @@ $( document ).bind( "pagecreate create", function( e ){
 					var outcome = game.halfinnings[i].atbats[j].pitches[game.halfinnings[i].atbats[j].pitches.length-1];
 					
 					
-					if(outcome.indexOf("-skip")===-1) //don't count inning skips for/against player stats
+					if(outcome!=null && outcome.indexOf("-skip")===-1) //don't count inning skips for/against player stats
 					{
 						if(isbatter && game.halfinnings[i].atbats[j].batter.name===player &&
 							regex.test(outcome) )
@@ -21610,6 +21729,349 @@ $( document ).bind( "pagecreate create", function( e ){
 		return outcomes;
 	}
 	
+	
+	function addTableStatHeader($table)
+	{
+		"use strict";
+		$table.find("thead tr").append("<th title='players name'>Name</th>");
+		$table.find("thead tr").append("<th title='games played'>GP</th>");
+		$table.find("thead tr").append("<th title='innings played'>IP</th>");
+		$table.find("thead tr").append("<th title='hits'>H</th>");
+		$table.find("thead tr").append("<th title='hits per inning'>H/I</th>");
+		$table.find("thead tr").append("<th title='runs batted in'>RBI</th>");
+		$table.find("thead tr").append("<th title='RBI per inning'>RBI/I</th>");
+		$table.find("thead tr").append("<th title='runs scored'>R</th>");
+		$table.find("thead tr").append("<th title='runs per inning'>R/I</th>");
+		$table.find("thead tr").append("<th title='walks'>W</th>");
+		$table.find("thead tr").append("<th title='walk percentage'>W%</th>");
+		$table.find("thead tr").append("<th title='errors'>E</th>");
+		$table.find("thead tr").append("<th title='at bats'>AB</th>");
+		$table.find("thead tr").append("<th title='strikeouts'>K</th>");
+		$table.find("thead tr").append("<th title='strikeout percentage'>K%</th>");
+		$table.find("thead tr").append("<th title='batting average'>AVG</th>");
+		$table.find("thead tr").append("<th title='plate appearances'>PA</th>");
+		$table.find("thead tr").append("<th title='on base percentage'>OB%</th>");
+		$table.find("thead tr").append("<th title='singles'>1B</th>");
+		$table.find("thead tr").append("<th title='singles per inning'>1B/I</th>");
+		$table.find("thead tr").append("<th title='doubles'>2B</th>");
+		$table.find("thead tr").append("<th title='doubles per inning'>2B/I</th>");
+		$table.find("thead tr").append("<th title='triples'>3B</th>");
+		$table.find("thead tr").append("<th title='triples per inning'>3B/I</th>");
+		$table.find("thead tr").append("<th title='home runs'>HR</th>");
+		$table.find("thead tr").append("<th title='home runs per inning'>HR/I</th>");
+		$table.find("thead tr").append("<th title='total bases'>TB</th>");
+		$table.find("thead tr").append("<th title='total bases per inning'>TB/I</th>");
+		$table.find("thead tr").append("<th title='slugging percentage'>SLG</th>");
+		$table.find("thead tr").append("<th title='on base plus slugging'>OPS</th>");
+		$table.find("thead tr").append("<th title='pitches'>P</th>");
+		$table.find("thead tr").append("<th title='pitches per inning'>P/I</th>");
+		$table.find("thead tr").append("<th title='balls'>B</th>");
+		$table.find("thead tr").append("<th title='strikes'>S</th>");
+		$table.find("thead tr").append("<th title='strike percentage'>S%</th>");
+		$table.find("thead tr").append("<th title='swings'>SW</th>");
+		$table.find("thead tr").append("<th title='swing percentage'>SW%</th>");
+	}
+	
+	
+	function addPlayerStats($tr,currentGame,player, isbatting)
+	{
+		"use strict";
+		if(player.name!=null)
+			player = player.name;
+		if(isbatting==null)
+			isbatting = true;
+			
+		
+		var gp = getPlayerGames(currentGame,player,isbatting);
+		var ip = getPlayerInnings(currentGame,player,isbatting);
+		var pas = getPlayerOutcomes(currentGame,player,plateappearanceregex, isbatting);
+		var abs = getPlayerOutcomes(currentGame,player,atbatregex, isbatting);
+		var ks = getPlayerOutcomes(currentGame,player,strikeoutregex, isbatting);
+		var hits = getPlayerOutcomes(currentGame,player,hitregex, isbatting);
+		var rbi = (getPlayerOutcomesScore(currentGame,player,hitregex, isbatting)+getPlayerOutcomesScore(currentGame,player,walkregex, isbatting));
+		var walks = getPlayerOutcomes(currentGame,player,walkregex, isbatting);
+		var errors = getPlayerOutcomes(currentGame,player,errorregex, isbatting);
+		var ob = roundNumber((hits+walks)/pas,3);
+		var singles = getPlayerOutcomes(currentGame,player,singleregex, isbatting);
+		var doubles = getPlayerOutcomes(currentGame,player,doubleregex, isbatting);
+		var triples = getPlayerOutcomes(currentGame,player,tripleregex, isbatting);
+		var homeruns = getPlayerOutcomes(currentGame,player,homerregex, isbatting);
+		var runs = getPlayerRunsScored(currentGame,player,isbatting);
+		
+		var pitches = getPlayerPitches(currentGame,player,pitchregex, isbatting);
+		var balls = getPlayerPitches(currentGame,player,ballregex, isbatting);
+		var strikes = (pitches-balls);
+		var swings = getPlayerPitches(currentGame,player,swingregex, isbatting);
+		
+		var tb = singles +
+			doubles*2 +
+			triples*3 +
+			homeruns*4;
+			
+		var slg = roundNumber(tb/abs,3);
+		
+		$tr.append("<th>"+player+"</th>");
+		$tr.append("<td>"+gp+"</td>");
+		$tr.append("<td>"+ip+"</td>");
+		
+		$tr.append("<td>"+hits+"</td>");
+		$tr.append("<td>"+roundNumber(hits/ip,3)+"</td>");
+			
+	
+		$tr.append("<td>"+rbi+"</td>");
+		$tr.append("<td>"+roundNumber(rbi/ip,3)+"</td>");
+		
+		$tr.append("<td>"+runs+"</td>");
+		$tr.append("<td>"+roundNumber(runs/ip,3)+"</td>");
+		
+		$tr.append("<td>"+walks+"</td>");
+		
+		
+		$tr.append("<td>"+roundNumber(walks/pas,3)+"</td>");
+		
+		$tr.append("<td>"+errors+"</td>");
+		
+		$tr.append("<td>"+abs+"</td>");
+		
+		$tr.append("<td>"+ks+"</td>");
+		
+		
+		$tr.append("<td>"+roundNumber(ks/pas,3)+"</td>");
+		
+		
+		$tr.append("<td>"+roundNumber(hits/abs,3)+"</td>");
+		
+		
+		$tr.append("<td>"+pas+"</td>");
+		
+		$tr.append("<td>"+ob+"</td>");
+		
+		$tr.append("<td>"+singles+"</td>");
+		
+		$tr.append("<td>"+roundNumber(singles/ip,3)+"</td>");
+		
+		$tr.append("<td>"+doubles+"</td>");
+		
+		$tr.append("<td>"+roundNumber(doubles/ip,3)+"</td>");
+		
+		$tr.append("<td>"+triples+"</td>");
+		
+		$tr.append("<td>"+roundNumber(triples/ip,3)+"</td>");
+		
+		$tr.append("<td>"+homeruns+"</td>");
+		
+		$tr.append("<td>"+roundNumber(homeruns/ip,3)+"</td>");
+		
+			
+		$tr.append("<td>"+tb+"</td>");
+		
+		$tr.append("<td>"+roundNumber(tb/ip,3)+"</td>");
+		
+		$tr.append("<td>"+slg+"</td>");
+		
+		$tr.append("<td>"+roundNumber(parseFloat(slg)+parseFloat(ob),3)+"</td>");
+		
+		$tr.append("<td>"+pitches+"</td>");
+		
+		$tr.append("<td>"+roundNumber(pitches/ip,3)+"</td>");
+		$tr.append("<td>"+balls+"</td>");
+		$tr.append("<td>"+strikes+"</td>");
+		
+		$tr.append("<td>"+roundNumber(strikes/pitches,3)+"</td>");
+		
+		$tr.append("<td>"+swings+"</td>");
+		
+		$tr.append("<td>"+roundNumber(swings/pitches,3)+"</td>");
+		
+	}
+	
+	function setTeamStats($table,team, isbatting)
+	{
+		"use strict";
+		$table.find("tr").remove();
+		$table.find("thead").append("<tr/>");
+		for(var i=0; i<team.players.length+1; i++)
+			$table.find("tbody").append("<tr/>");
+			
+		addTableStatHeader($table);
+		
+		for(var i=0; i<team.players.length; i++)
+		{
+			var $tr = $table.find("tbody tr:eq("+i+")");
+			addPlayerStats($tr,currentGame,team.players[i],isbatting);
+		}
+		
+		if(isbatting)
+		{
+		
+			var gp = getTeamGames(currentGame,team);
+			var ip = getTeamInnings(currentGame,team, isbatting);
+			var pas = getTeamOutcomes(currentGame,team,plateappearanceregex, isbatting);
+			var abs = getTeamOutcomes(currentGame,team,atbatregex, isbatting);
+			var ks = getTeamOutcomes(currentGame,team,strikeoutregex, isbatting);
+			var hits = getTeamOutcomes(currentGame,team,hitregex, isbatting);
+			var rbi = (getTeamOutcomesScore(currentGame,team,hitregex, isbatting)+getTeamOutcomesScore(currentGame,team,walkregex, isbatting));
+			var walks = getTeamOutcomes(currentGame,team,walkregex, isbatting);
+			var errors = getTeamOutcomes(currentGame,team,errorregex, isbatting);
+			var ob = roundNumber((hits+walks)/pas,3);
+			var singles = getTeamOutcomes(currentGame,team,singleregex, isbatting);
+			var doubles = getTeamOutcomes(currentGame,team,doubleregex, isbatting);
+			var triples = getTeamOutcomes(currentGame,team,tripleregex, isbatting);
+			var homeruns = getTeamOutcomes(currentGame,team,homerregex, isbatting);
+			
+			var pitches = getTeamPitches(currentGame,team,pitchregex,isbatting);
+			var balls = getTeamPitches(currentGame,team,ballregex,isbatting);
+			var strikes = (pitches-balls);
+			var swings = getTeamPitches(currentGame,team,swingregex, isbatting);
+			var runs = 0;
+			
+			var tb = singles +
+				doubles*2 +
+				triples*3 +
+				homeruns*4;
+				
+			var slg = roundNumber(tb/abs,3);
+				
+			var $tr = $table.find("tbody tr:eq("+team.players.length+")");
+			$tr.append("<th>"+team.name+"</th>");
+			
+			$tr.append("<td>"+gp+"</td>");
+			$tr.append("<td>"+ip+"</td>");
+			
+			$tr.append("<td>"+hits+"</td>");
+			$tr.append("<td>"+roundNumber(hits/ip,3)+"</td>");
+		
+			$tr.append("<td>"+rbi+"</td>");
+			$tr.append("<td>"+roundNumber(rbi/ip,3)+"</td>");
+
+			
+			$tr.append("<td>"+runs+"</td>");
+			$tr.append("<td>"+roundNumber(runs/ip,3)+"</td>");
+
+			
+			$tr.append("<td>"+walks+"</td>");
+			
+			$tr.append("<td>"+roundNumber(walks/pas,3)+"</td>");
+
+			
+			$tr.append("<td>"+errors+"</td>");
+			
+			$tr.append("<td>"+abs+"</td>");
+			
+			$tr.append("<td>"+ks+"</td>");
+			
+			$tr.append("<td>"+roundNumber(ks/pas,3)+"</td>");
+
+			
+			$tr.append("<td>"+roundNumber(hits/abs,3)+"</td>");
+
+			
+			$tr.append("<td>"+pas+"</td>");
+			
+			$tr.append("<td>"+ob+"</td>");
+			
+			$tr.append("<td>"+singles+"</td>");
+			$tr.append("<td>"+roundNumber(singles/ip,3)+"</td>");
+
+			
+			$tr.append("<td>"+doubles+"</td>");
+			$tr.append("<td>"+roundNumber(doubles/ip,3)+"</td>");
+
+			
+			$tr.append("<td>"+triples+"</td>");
+			$tr.append("<td>"+roundNumber(triples/ip,3)+"</td>");
+
+			
+			$tr.append("<td>"+homeruns+"</td>");
+			$tr.append("<td>"+roundNumber(homeruns/ip,3)+"</td>");
+
+			
+				
+			$tr.append("<td>"+tb+"</td>");
+			$tr.append("<td>"+roundNumber(tb/ip,3)+"</td>");
+
+			
+			$tr.append("<td>"+slg+"</td>");
+			
+			$tr.append("<td>"+roundNumber(parseFloat(slg)+parseFloat(ob),3)+"</td>");
+			
+			$tr.append("<td>"+pitches+"</td>");
+			$tr.append("<td>"+roundNumber(pitches/ip,3)+"</td>");
+
+			$tr.append("<td>"+balls+"</td>");
+			$tr.append("<td>"+strikes+"</td>");
+			$tr.append("<td>"+roundNumber(strikes/pitches,3)+"</td>");
+
+			$tr.append("<td>"+swings+"</td>");
+			$tr.append("<td>"+roundNumber(swings/pitches,3)+"</td>");
+
+		}
+	
+	}
+	function setBoxScores($table)
+	{
+		"use strict";
+		if(currentGame!=null)
+		{
+			$table.find("tr").remove();
+			$table.find("thead").append("<tr/>");
+			$table.find("tbody").append("<tr/>").append("<tr/>");
+			
+			$table.find("thead tr").append("<th>Team</th>");
+			$table.find("tbody tr:eq(0)").append("<th>"+currentGame.team2.name+"</th>");
+			$table.find("tbody tr:eq(1)").append("<th>"+currentGame.team1.name+"</th>");
+			
+			$table.find("thead tr").append("<th class='spacer'>&nbsp;</th>");
+			$table.find("tbody tr:eq(0)").append("<th class='spacer'>&nbsp;</th>");
+			$table.find("tbody tr:eq(1)").append("<th class='spacer'>&nbsp;</th>");
+			
+			for(var i=0; i<currentGame.halfinnings.length; i++)
+			{
+				if(currentGame.halfinnings[i].atbats[0].pitches.length===0)
+				{ // very start of halfinning - post a 0
+					if(i%2===0) //top of inning, add header too
+						$table.find("thead tr").append("<th>"+((i/2)+1)+"</th>");
+					$table.find("tbody tr:eq("+(i%2)+")").append("<td>0</td>");
+					continue;
+				}
+				if(i%2===0)
+				{
+					$table.find("thead tr").append("<th>"+((i/2)+1)+"</th>");
+					
+					$table.find("tbody tr:eq(0)").append("<td>"+getHalfInningScore(currentGame.halfinnings[i])+"</td>");
+				}
+				else
+				{
+					$table.find("tbody tr:eq(1)").append("<td>"+getHalfInningScore(currentGame.halfinnings[i])+"</td>");
+				}
+			}
+			if($table.find("tbody tr:eq(0) td, tbody tr:eq(0) th").length>$table.find("tbody tr:eq(1) td,tbody tr:eq(1) th").length)
+				$table.find("tbody tr:eq(1)").append("<td>&nbsp;</td>");
+			
+			$table.find("thead tr").append("<th class='spacer'>&nbsp;</th>");
+			$table.find("tbody tr:eq(0)").append("<td class='spacer'>&nbsp;</td>");
+			$table.find("tbody tr:eq(1)").append("<td class='spacer'>&nbsp;</td>");
+			
+			$table.find("thead tr").append("<th>R</th>");
+			$table.find("tbody tr:eq(0)").append("<th>"+getTeamScore(currentGame,currentGame.team2)+"</th>");
+			$table.find("tbody tr:eq(1)").append("<th>"+getTeamScore(currentGame,currentGame.team1)+"</th>");
+			
+			
+			$table.find("thead tr").append("<th>H</th>");
+			$table.find("tbody tr:eq(0)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team2,hitregex)+"</td>");
+			$table.find("tbody tr:eq(1)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team1,hitregex)+"</td>");
+		
+			
+			
+			$table.find("thead tr").append("<th>E</th>");
+			$table.find("tbody tr:eq(0)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team1,errorregex)+"</td>");
+			$table.find("tbody tr:eq(1)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team2,errorregex)+"</td>");
+		}
+	}
+	 
+
+/**************** bigleague.classes.js ****************/
+
 	function Game (type) {
 		"use strict";
 		this.team1 = new Team();
@@ -21666,192 +22128,37 @@ $( document ).bind( "pagecreate create", function( e ){
 		this.bases = null;
 	};
 	
-	var currentGame;
-	var currentGameIndex;
-	var currentSeasonIndex=-1;
-	var games;
-	var savedGames;
-	var viewMode="wide";
-	
-	var undos = [];
-	var redos  = [];
-
-	var clk = null;
-	
-	function processSizeChange()
+	function gameReviver(key, value)
 	{
 		"use strict";
-		if($("#game:visible").size()>0)
-			setGameViewMode();
-		else if($("#home:visible").size()>0)
-			setHomeViewMode();
-	}
-	$(function () {
-		"use strict";
-		
-		if('ontouchstart' in document.documentElement)
-		{
-			CONFIG.isMobile = true;
-			//CONFIG.clickEvent = 'tap';
-		}
-		else
-		{
-			CONFIG.processDelay = 0;
-			//CONFIG.clearDelay = 0;
-		}
-		if(CONFIG.defaultTransition!=null)
-			$.mobile.defaultPageTransition=CONFIG.defaultTransition;
-		
-		// turn on saving for 'secret' season url
-		try
-		{
-			if(window.navigator.onLine)  
-			{
-				if(window.location.href.indexOf("season/")!==-1)
-				{
-					CONFIG.connectToServer = true;
-				}
-			
-			}
-		}
-		catch(exc){}
-		if(CONFIG.connectToServer && window.navigator.onLine)
-		{
-			if(window.location.protocol!=="http" && window.location.protocol!=="https")
-			{ // file:// mode/etc
-				LOAD_URL = CONFIG.server+"/"+LOAD_URL;
-				POST_URL = CONFIG.server+"/"+POST_URL;
-			}
-		}
-		
-	    games = getGames();
-		CONFIG = getConfig();
-	    getSavedGames();
-		
-		if(CONFIG.isMobile)
-		{
-			window.top.scrollTo(0, 1); //hide iOS address bar
-			$(document).live("orientationchange", function(ev){
-				processSizeChange();
-			});
-		}
-		else
-		{
-			$(window).bind("resize", function(ev){
-				processSizeChange();
-			});
-		}
-		setHomeViewMode();
-		setGameViewMode();
-		
-	    $("#home").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindHome,
-				CONFIG.processDelay);
-	    })
-		.live("pagebeforeshow",function(){
-			showPageLoadingMsg($(this));
-		});
-		bindHome();
-		
-	    $("#continue,#stats").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindGames,
-				CONFIG.processDelay);
-	    })
-		.live("pagebeforeshow",function(){
-			showPageLoadingMsg($(this));
-		});
-	    bindGames();
-		
-		
-		$("#config").live("pageshow",function(){
-			showPageLoadingMsg();
-			setTimeout(bindConfig,
-				CONFIG.processDelay);
-		})
-		.live("pagebeforeshow",function(){
-			showPageLoadingMsg($(this));
-		});
-		bindConfig();
-
-		$("#newgame").live("pageshow",function(){
-			showPageLoadingMsg();
-			setTimeout(bindNewGame,
-				CONFIG.processDelay);
-		})
-		.live("pagebeforeshow",function(){
-			showPageLoadingMsg($(this));
-		});
-		bindNewGame();
-		
-	    // grab and use the 'subpage navigation value' for current game, if any
-	    // couldn't find out how to do this directly in jqmobile
-	    var gameregex = /.*\#game(stats)?\&ui-page=game(\d*)(\&season(\d*))?/ig;
-	    var matches = gameregex.exec(window.location.href);
-	    if (matches != null && matches.length > 1) {
-			showPageLoadingMsg();
-			currentGameIndex = parseInt(matches[2]);
-			
-			if(matches.length>4 && matches[4]!=null)
-				currentSeasonIndex = parseInt(matches[4]);
-			else
-				currentSeasonIndex = -1;
-			
-			setTimeout(loadCurrentGame,
-				CONFIG.processDelay);
-	    }
-
-	    // grab and use the 'subpage navigation value' for current season, if any
-	    // couldn't find out how to do this directly in jqmobile
-	    var seasonregex = /.*\#seasonstats?\&ui-page=season(\-?\d*)/ig;
-		matches = seasonregex.exec(window.location.href);
-	    if (matches != null && matches.length > 1) {
-			showPageLoadingMsg();
-			currentSeasonIndex = parseInt(matches[1]);
-			setTimeout(bindSeasonStats,
-				CONFIG.processDelay);
-	    }
-		
-	    $("#game").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(loadCurrentGame,
-				CONFIG.processDelay);
-	    })
-		.live("pagebeforeshow",function(){
-			showPageLoadingMsg($(this));
-		});
-	    $("#gamestats").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindGameStats,
-				CONFIG.processDelay);
-	    })
-		.live("pagebeforeshow",function(){
-			showPageLoadingMsg($(this));
-		});
-	    $("#seasonstats").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindSeasonStats,
-				CONFIG.processDelay);
-	    })
-		.live("pagebeforeshow",function(){
-			showPageLoadingMsg($(this));
-		});
-		gameInit();
-		newGameInit();
-		configInit();
-	});
 	
-	function substitutePlayer(team,playerIndex,newname)
-	{
-		var curplayer = team.players[playerIndex];
-		curplayer.skip = true;
-		
-		team.players[playerIndex] = new Player();
-		team.players[playerIndex].name = newname;
-		
-		team.players[team.players.length] = curplayer;
-	}
+		// if this is a game object and it is missing a getId function, set it up
+		if(value!=null && value.players!=null && value.currentbatter!=null
+			 && value.currentpitcher!=null && value.name!=null && value.getId==null)
+		{
+			value.getId = function(){
+				
+				var id = this.name;
+				for(var i=0;i<this.players.length; i++)
+					id += this.players[i].name;
+				return id;
+			};
+		}
+		// if this is a game object and it is missing a innings property - set it to default
+		if(value!=null && value.players!=null && value.currentbatter!=null
+			 && value.currentpitcher!=null && value.name!=null && value.innings==null)
+			value.innings = CONFIG.inningsPerGame;
+			
+			
+		// if this is a atbat object and it is missing a runnersOut property - set it to default
+		if(value!=null && value.pitcher!=null && value.pitcherIndex!=null
+			 && value.batter!=null && value.batterIndex!=null && value.runnersOut==null)
+			value.runnersOut = [];
+			
+			
+		return value;
+	} 
+/*************** bigleague.scoregameui.js ***********/
 	
 	var gameinited=false;
 	function gameInit() {
@@ -22415,162 +22722,20 @@ $( document ).bind( "pagecreate create", function( e ){
 		}
 	}
 	
-	var configinited=false;
-	function configInit() {
-		if(!configinited)
-		{
-			configinited=true;
-			$("#configform").submit(function (e) {
-				
-				CONFIG.ballsForWalk = parseInt($("#ballsForWalk").val());
-				CONFIG.startingBalls = parseInt($("#startingBalls").val());
-				CONFIG.strikesForK = parseInt($("#strikesForK").val());
-				CONFIG.startingStrikes = parseInt($("#startingStrikes").val());
-				CONFIG.twoStrikeFouls = parseInt($("#twoStrikeFouls").val());
-				CONFIG.outsPerInning = parseInt($("#outsPerInning").val());
-				CONFIG.inningsPerGame = parseInt($("#inningsPerGame").val());
-				CONFIG.maxTeamPlayers = parseInt($("#maxTeamPlayers").val());
-				CONFIG.pushRunnersOnHit = $("#pushRunnersOnHit").val()==="on";
-				CONFIG.extraInningRunners = parseInt($("#extraInningRunners").val());
-				CONFIG.overSpeedWalk = $("#overSpeedWalk").val()==="on";
-				CONFIG.halfInningSkip = $("#halfInningSkip").val()==="on";
-				CONFIG.doublePlayOnFly = $("#doublePlayOnFly").val()==="on";
-				CONFIG.doublePlayOnLine = $("#doublePlayOnLine").val()==="on";
-				CONFIG.doublePlayRunnersRequired = $("#doublePlayRunnersRequired").val()==="on";
-				CONFIG.doublePlayRemovesAdditionalRunner = $("#doublePlayRemovesAdditionalRunner").val()==="on";
-				
-				if($("#doublePlayAdvanceOnFailed").val()==="on")
-					CONFIG.doublePlayAdvanceOnFailed = 1;
-				else
-					CONFIG.doublePlayAdvanceOnFailed = 0;
-				CONFIG.autoPitcherChange = $("#autoPitcherChange").val()==="on";
-				CONFIG.flySingles = $("#flySingles").val()==="on";
-				CONFIG.lineSingles = $("#lineSingles").val()==="on";
-				CONFIG.sacFlys = $("#sacFlys").val()==="on";
-				
-				saveConfig();
-				
-				$.mobile.changePage($("#home"),
-						{
-						  changeHash: true,
-						  dataUrl: "#home"
-						});
-				e.preventDefault();
-				return false;
-			});
-		}
-	}
-	var newgameinited=false;
-	function newGameInit() {
-		if(!newgameinited)
-		{
-			newgameinited=true;
-			
-			$("#newgameform").submit(function (e) {
-				
-				currentGame = new Game();
-				currentGame.innings = $("#innings").val();
-				currentGame.team1.name = $("#team1").val();
-				currentGame.team2.name = $("#team2").val();
-				
-				try
-				{
-					parseInt($("#innings").val());
-				}
-				catch(exc){
-					currentGame.innings  = "6";
-				}
-				
-				if($.trim(currentGame.team1.name).length===0)
-					currentGame.team1.name="Team 1";
-					
-				if($.trim(currentGame.team2.name).length===0)
-					currentGame.team2.name="Team 2";
-				
-				for (var i = 1; i <= CONFIG.maxTeamPlayers; i++) {
-					if ($("#player" + i).val() !== "") {
-						currentGame.team1.players[currentGame.team1.players.length] = new Player();
-						currentGame.team1.players[currentGame.team1.players.length - 1].name = $("#player" + i).val();
-					}
-					if ($("#player" + i + "_2").val() !== "") {
-						currentGame.team2.players[currentGame.team2.players.length] = new Player();
-						currentGame.team2.players[currentGame.team2.players.length - 1].name = $("#player" + i + "_2").val();
-					}
-				}
-				
-				if(currentGame.team1.players.length==0)
-				{
-					currentGame.team1.players[currentGame.team1.players.length] = new Player();
-					currentGame.team1.players[currentGame.team1.players.length - 1].name = "Player 1";
-				}
-				if(currentGame.team2.players.length==0)
-				{
-					currentGame.team2.players[currentGame.team2.players.length] = new Player();
-					currentGame.team2.players[currentGame.team2.players.length - 1].name = "Player 2";
-				}
-				
-				nextAtBat();
 
-				currentGameIndex = games.length;
-				currentSeasonIndex = -1;
-				games[currentGameIndex] = currentGame;
-				undos = [];
-				redos = [];
-				undos[0] = JSON.stringify(currentGame);
-				saveGames(games);
 
-				$.mobile.changePage($("#game"),
-						{
-						  changeHash: true,
-						  dataUrl: "#game&ui-page=game" + currentGameIndex
-						});
-				e.preventDefault();
-				return false;
-			});
-		}
+	function substitutePlayer(team,playerIndex,newname)
+	{
+		var curplayer = team.players[playerIndex];
+		curplayer.skip = true;
+		
+		team.players[playerIndex] = new Player();
+		team.players[playerIndex].name = newname;
+		
+		team.players[team.players.length] = curplayer;
 	}
 	
-	function bindHome()
-	{
-		"use strict";
-		if(games.length===0)
-			$("a[href='#continue']").hide();
-		else
-			$("a[href='#continue']").show();
-		
-		
-		if(games.length===0 && !CONFIG.connectToServer)
-			$("a[href='#stats']").hide();
-		else
-			$("a[href='#stats']").show();
-			
-		setTimeout(function(){	
-			hidePageLoadingMsg();
-		},CONFIG.clearDelay);
-	}
-	function setHomeViewMode()
-	{
-		"use strict";
-		var width = $(window).width();
-		if(width<480)
-		{
-			var backsize='auto 50px';
-			$("#home").css("-moz-background-size",backsize)
-				.css("-webkit-background-size",backsize)
-				.css("-o-background-size",backsize)
-				.css("background-size",backsize);
-			$("#home div.ui-content:first").css("padding-top","50px");
-		}
-		else
-		{
-			var backsize='auto 75px';
-			$("#home").css("-moz-background-size",backsize)
-				.css("-webkit-background-size",backsize)
-				.css("-o-background-size",backsize)
-				.css("background-size",backsize);
-			$("#home div.ui-content:first").css("padding-top","75px");
-		}
-	}
+	
 	function setGameViewMode()
 	{
 		"use strict";
@@ -22662,96 +22827,460 @@ $( document ).bind( "pagecreate create", function( e ){
 		}
 	}
 	
-	function loadCurrentGame()
+	
+	function bindGame()
 	{
 		"use strict";
 		if(!savedgamesloaded)
 		{
-			setTimeout(loadCurrentGame,100);
+			setTimeout(bindGame,100);
 			return;
 		}
-		var prevGame = currentGame;
+		if(currentGame==null)
+			return;
+			
+		var atbat = getCurrentAtBat();
+		var awayscore = getTeamScore(currentGame,currentGame.team2);
+		var homescore = getTeamScore(currentGame,currentGame.team1);
+		if(viewMode==="wide")
+		{
+			$("#batterabs").text(getPlayerOutcomes(currentGame,atbat.batter.name,atbatregex, true,false));
+			$("#batterwalks").text(getPlayerOutcomes(currentGame,atbat.batter.name,walkregex, true,false));
+			$("#batterhits").text(getPlayerOutcomes(currentGame,atbat.batter.name,hitregex, true,false));
+			$("#batterrbi").text((getPlayerOutcomesScore(currentGame,atbat.batter.name,hitregex, true)+getPlayerOutcomesScore(currentGame,atbat.batter.name,walkregex, true)));
+			$("#pitcherhits").text(getPlayerOutcomes(currentGame,atbat.pitcher.name,hitregex, false,false));
+			$("#pitcherwalks").text(getPlayerOutcomes(currentGame,atbat.pitcher.name,walkregex, false,false));
+			$("#pitcherstrikeouts").text(getPlayerOutcomes(currentGame,atbat.pitcher.name,strikeoutregex, false,false));
+			$("#pitcherruns").text(getPlayerRunsScored(currentGame,atbat.pitcher.name,false));
+			
+			
+			setBoxScores($("#gameboxscore"));
 		
-		if(currentSeasonIndex===-1 )
-			currentGame = games[currentGameIndex];
+			$("#narrowscore").hide();
+			$("#widescore").show();
+		}
 		else
-			currentGame = savedGames[currentSeasonIndex].games[currentGameIndex];
-			
-			
-		redos = [];
-		if(prevGame!==currentGame) // only on game init
 		{
-			undos = [];
-			undos[0] = JSON.stringify(currentGame);
-			setupRules();
+			$("#homescore").text(homescore);
+			$("#awayscore").text(awayscore);
+			
+			$("#hometeam").text(currentGame.team1.name);
+			$("#awayteam").text(currentGame.team2.name);
+			
+			$("#widescore").hide();
+			$("#narrowscore").show();
+			
 		}
-		bindGame();
-		bindGameStats();
-		setupFielders();
-		setGameViewMode();
-	}
-	function showPageLoadingMsg($page)
-	{
-		if($page==null)
-			$page = $('.ui-page:visible');
-		//$.mobile.showPageLoadingMsg(); //doesn't work
-		// http://stackoverflow.com/questions/7420023/jquery-mobile-problems-getting-showpageloadingmsg-to-work-with-pagebeforeshow
-		$('body').addClass('ui-loading');
-		$page.addClass('disabled');
-	}
-	function hidePageLoadingMsg($page)
-	{
-		if($page==null)
-			$page = $('.ui-page:visible');
-		//$.mobile.hidePageLoadingMsg(); //doesn't work
-		// http://stackoverflow.com/questions/7420023/jquery-mobile-problems-getting-showpageloadingmsg-to-work-with-pagebeforeshow
-		$('body').removeClass('ui-loading');
-		$page.removeClass('disabled');
-	}
-	function bindConfig()
-	{
-		"use strict";
-		if($("#config:visible").length==0)
-			return;
-		if(!savedgamesloaded)
+		
+		
+		$("#game h1").text(currentGame.team2.name + "(" + awayscore + ")" +
+			" at " + currentGame.team1.name + "(" + homescore + ")");
+		var halfinning = getCurrentHalfInning();
+		$("#batter,#batter_n").text(atbat.batter.name);
+		$("#pitcher,#pitcher_n").text(atbat.pitcher.name);
+		$("#balls,#balls_n").text(atbat.currentballs);
+		$("#strikes,#strikes_n").text(atbat.currentstrikes);
+		$("#outs,#outs_n").text(halfinning.currentouts);
+		$("#inning,#inning_n").text(((halfinning.top)?"top of ":"bottom of ") + halfinning.number);
+		
+		if(atbat.bases==null)
 		{
-			setTimeout(bindConfig,100);
-			return;
+			atbat.bases=[];
+			for(var i=0;i<4; i++)
+			{
+				atbat.bases[i] = new Base();
+				atbat.bases[i].number = i+1;
+			}
 		}
-		CONFIG = getConfig();
+		var $basePath = $("#basePath");
 		
-		$("#ballsForWalk").val(CONFIG.ballsForWalk);
-		$("#startingBalls").val(CONFIG.startingBalls);
-		$("#strikesForK").val(CONFIG.strikesForK);
-		$("#startingStrikes").val(CONFIG.startingStrikes);
-		$("#twoStrikeFouls").val(CONFIG.twoStrikeFouls);
-		$("#outsPerInning").val(CONFIG.outsPerInning);
-		$("#inningsPerGame").val(CONFIG.inningsPerGame);
-		$("#maxTeamPlayers").val(CONFIG.maxTeamPlayers);
-		setToggleOption("#pushRunnersOnHit", CONFIG.pushRunnersOnHit);
-		$("#extraInningRunners").val(CONFIG.extraInningRunners);
-		setToggleOption("#halfInningSkip", CONFIG.halfInningSkip);
-		setToggleOption("#overSpeedWalk", CONFIG.overSpeedWalk);
-		setToggleOption("#doublePlayOnFly", CONFIG.doublePlayOnFly);
-		setToggleOption("#doublePlayOnLine", CONFIG.doublePlayOnLine);
-		setToggleOption("#doublePlayRunnersRequired", CONFIG.doublePlayRunnersRequired);
-		setToggleOption("#doublePlayRemovesAdditionalRunner", CONFIG.doublePlayRemovesAdditionalRunner);
-		setToggleOption("#doublePlayAdvanceOnFailed", CONFIG.doublePlayAdvanceOnFailed>0);
-		setToggleOption("#autoPitcherChange", CONFIG.autoPitcherChange);
-		setToggleOption("#flySingles", CONFIG.flySingles);
-		setToggleOption("#lineSingles", CONFIG.lineSingles);
-		setToggleOption("#sacFlys", CONFIG.sacFlys);
+		if($basePath[0].getContext)
+		{
+			drawBases($basePath,atbat.bases);
+			drawBases($("#basePath_n"),atbat.bases);
+		}
+		else
+		{
+			if(atbat.bases[0].player==null)
+				$("#first,#first_n").text("X");
+			else
+				$("#first,#first_n").text(atbat.bases[0].player.name);
+			if(atbat.bases[1].player==null)
+				$("#second,#second_n").text("X");
+			else
+				$("#second,#second_n").text(atbat.bases[1].player.name);
+			if(atbat.bases[2].player==null)
+				$("#third,#third_n").text("X");
+			else
+				$("#third,#third_n").text(atbat.bases[2].player.name);
+		}
+			
 		
+		if(undos.length<=1)
+			$("#undoli").hide();
+		else
+			$("#undoli").show();
+			
+		if(redos.length===0)
+			$("#redoli").hide();
+		else
+			$("#redoli").show();
 		
+		if((!CONFIG.doublePlayRunnersRequired || atbat.bases[0].player!=null) && halfinning.currentouts<CONFIG.outsPerInning-1)
+			$(".dp:not([data-disabled])").show();
+		else
+			$(".dp:not([data-disabled])").hide();
+			
+		
+		if((atbat.bases[0].player!=null || atbat.bases[1].player!=null || atbat.bases[2].player!=null) && halfinning.currentouts<2)
+			$(".sac:not([data-disabled])").show();
+		else
+			$(".sac:not([data-disabled])").hide();
+		
+		if((currentGame.season && currentGame.season.length>0) || !window.navigator.onLine || !CONFIG.connectToServer)
+			$("#server").hide();	
+		else
+			$("#server").show();
+		
+		if($("#other").nextAll("li:visible").length===0)
+			$("#other").hide();
+		else
+			$("#other").show();
+		/*
+		if(currentGame.halfinnings.length%2 === 0  && currentgame.halfinnings.length/2 >= currentGame.innings
+			&& getTeamScore(currentGame,currentGame.team1) !== getTeamScore(currentGame,currentGame.team2) )
+		{ // game over!
+			$("li:visible:not(#other,#undoli,#redoli,#gameover)").hide();
+			$("#gameover").show();
+		}
+		else
+		{
+			$("li:visible:not(#other,#undoli,#redoli,#gameover)").show();
+			$("#gameover").hide();
+		}
+		*/
 		setTimeout(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}
-	function setToggleOption(selector,toggled)
+	
+	var draw_current_bases=null;
+	function drawBases($canvas, bases)
 	{
-		$(selector+" option[value='"+(toggled?"on":"off")+"']").attr("selected","selected");
-		$(selector).slider('refresh');
+		"use strict";
+		if(bases==null)
+			bases = draw_current_bases;
+		else
+			draw_current_bases = bases;
+		
+		if(bases==null)
+			return;
+			
+		$canvas.attr("width",1)
+			.attr("height",1);
+			
+		var basePathCw = $canvas.parent().width();
+		var basePathCh  = $canvas.parent().parent().height()-4;
+		var minSide = Math.min(basePathCw, basePathCh);
+		if(minSide>0)
+		{
+			var diamondsize = minSide*(.7);
+			var basesize = diamondsize/4.0;
+			
+			$canvas.attr("width",basePathCw)
+				.attr("height",basePathCh);
+			var basePathC = $canvas[0].getContext('2d');
+			
+			basePathC.strokeStyle = "#947333";
+			basePathC.fillStyle = "#D6522C";//"#5E87B0";
+			var translateX = (basePathCw-diamondsize)/2.0;
+			var translateY = (basePathCh-diamondsize)/2.0;
+			
+			var tranCenterX = basePathCw/2.0;
+			var tranCenterY = basePathCh/2.0;
+			
+			// draw a set of rotated squares, shifted to center of canvas
+			
+			// need to do rotation  with upperleft at center of canvas and then go back
+			// http://stackoverflow.com/questions/9402631/opengl-translate-down-on-y-and-rotate-on-z-around-element-center-on-android
+			basePathC.translate(tranCenterX ,tranCenterY);
+			basePathC.rotate(45.0*Math.PI/180.0);
+			basePathC.translate(-tranCenterX ,-tranCenterY);
+			
+			// move it to to center point
+			basePathC.translate(translateX,translateY);
+			
+			//diamond
+			basePathC.strokeRect(0,0,diamondsize,diamondsize);
+			
+			//first base	
+			basePathC.strokeRect(diamondsize-basesize,0,basesize,basesize);
+			if(bases[0].player!=null)
+				basePathC.fillRect(diamondsize-basesize,0,basesize,basesize);
+				
+			//second base
+			basePathC.strokeRect(0,0,basesize,basesize);
+			if(bases[1].player!=null)
+				basePathC.fillRect(0,0,basesize,basesize);
+			
+			// third base	
+			basePathC.strokeRect(0,diamondsize-basesize,basesize,basesize);
+			if(bases[2].player!=null)
+				basePathC.fillRect(0,diamondsize-basesize,basesize,basesize);
+				
+			//home
+			basePathC.strokeRect(diamondsize-basesize,diamondsize-basesize,basesize,basesize);
+		}
 	}
+	
+	
+	function setupRules()
+	{
+		"use strict";
+		if(!CONFIG.doublePlayOnFly)
+		{
+			$(".fly .dp").hide().attr("data-disabled","");
+		}
+		else
+		{
+			$(".fly .dp").show().removeAttr("data-disabled");
+		}
+		if(!CONFIG.doublePlayOnLine)
+		{
+			$(".linedrive .dp").hide().attr("data-disabled","");
+		}
+		else
+		{
+			$(".linedrive .dp").show().removeAttr("data-disabled");
+		}
+		if(!CONFIG.ceilingOuts)
+		{
+			$(".ceiling").hide().attr("data-disabled","");
+		}
+		else
+		{
+			$(".ceiling").show().removeAttr("data-disabled");
+		}
+		if(!CONFIG.flySingles)
+		{
+			$(".fly .single").hide().attr("data-disabled","");
+		}
+		else
+		{
+			$(".fly .single").show().removeAttr("data-disabled","");
+		}
+		if(!CONFIG.lineSingles)
+		{
+			$(".linedrive .single").hide().attr("data-disabled","");
+		}
+		else
+		{
+			$(".linedrive .single").show().removeAttr("data-disabled");
+		}
+		if(CONFIG.doublePlayAdvanceOnFailed<=0)
+		{
+			$(".faileddp").hide().attr("data-disabled","");
+		}
+		else
+		{
+			$(".faileddp").show().removeAttr("data-disabled");
+		}
+		if(!CONFIG.overSpeedWalk)
+		{
+			$(".overspeed").hide().attr("data-disabled","");
+		}
+		else
+		{
+			$(".overspeed").show().removeAttr("data-disabled");
+		}
+		if(!CONFIG.halfInningSkip)
+		{
+			$(".halfInningSkip").hide().attr("data-disabled","");
+		}
+		else
+		{
+			$(".halfInningSkip").show().removeAttr("data-disabled");
+		}
+		if(!CONFIG.sacFlys)
+		{
+			$(".sac").hide().attr("data-disabled","");
+		}
+		else
+		{
+			$(".sac").show().removeAttr("data-disabled");
+		}
+		
+		try
+		{ // might not be previously init'd
+			$("#game ul").listview("refresh");
+		}
+		catch(exc){
+		}
+	}
+	var setupFieldersRunning=false;
+	function setupFielders()
+	{
+		"use strict";
+		
+		if($("#game ul.inplay").is(":visible")) //just clicked, hide to prevent extra click
+		{
+			$("#game ul.inplay").hide();
+		}
+		try // updating fielders before init screws stuff up.  test for it.
+		{ // might not be previously init'd
+			$("#game ul.inplay").listview("refresh");
+		}
+		catch(exc){
+			setTimeout(setupFielders,100);
+			return;
+		}
+		if(!setupFieldersRunning)
+		{
+			setupFieldersRunning=true;
+			var fielded = $("li:has(a[data-fielded-by])");
+			fielded.find("a[data-fielded-by]").attr("data-fielded-by","");
+			fielded.find("span.fieldedby").remove();
+			for(var i=fielded.length; i>=0; i--) // clear previous fielders
+			{
+				var pitch = fielded.eq(i).find("a[data-fielded-by]").attr("data-pitch");
+				
+				if(pitch)
+				{
+					var els = fielded.filter(":has([data-pitch="+pitch+"])").slice(1);
+					i-=els.length;
+					els.remove();
+					fielded = $("li:has(a[data-fielded-by])");
+				}
+			}
+			//return;
+			var teamfielding = getCurrentTeamFielding();
+			for(var i=0; i<fielded.length; i++) // dupe fielding items for each fielder
+			{
+				var item = fielded.eq(i);
+				for(var j=1; j<teamfielding.players.length; j++)
+				{
+					var newi = item.clone();
+					newi.find("a[data-fielded-by]").attr("data-fielded-by",teamfielding.players[j].name)
+						.append("<span class='fieldedby'> By "+teamfielding.players[j].name+"</span>");
+					
+					item.after(newi);
+				}
+					item.find("a[data-fielded-by]").attr("data-fielded-by",teamfielding.players[0].name)
+						.append("<span class='fieldedby'> By "+teamfielding.players[0].name+"</span>");
+			}
+			
+			$("#game ul.inplay").listview("refresh");
+			setupFieldersRunning=false;
+		}
+	}
+	
+	
+	function post()
+	{
+		"use strict";
+		if(CONFIG.connectToServer && window.navigator.onLine)
+		{
+			if(currentGame && currentGame.season && currentGame.season.length>0)
+			{
+				var gamename = currentGame.team2.name + " at " + currentGame.team1.name;
+				$.post(POST_URL, 
+					{
+						json: JSON.stringify(currentGame), 
+						name: gamename, 
+						id: currentGame.id,
+						season: currentGame.season
+					},
+					function(data){
+						
+						if(data.id)
+						{
+							currentGame.id=data.id;
+						}
+					});
+			}
+		}
+	}
+	function output()
+	{
+		"use strict";
+		console.log(currentGame);
+		console.log(JSON.stringify(currentGame));
+	}
+	 
+/*************** bigleague.newgame.js ***********/
+
+
+	var newgameinited=false;
+	function newGameInit() {
+		if(!newgameinited)
+		{
+			newgameinited=true;
+			
+			$("#newgameform").submit(function (e) {
+				
+				currentGame = new Game();
+				currentGame.innings = $("#innings").val();
+				currentGame.team1.name = $("#team1").val();
+				currentGame.team2.name = $("#team2").val();
+				
+				try
+				{
+					parseInt($("#innings").val());
+				}
+				catch(exc){
+					currentGame.innings  = "6";
+				}
+				
+				if($.trim(currentGame.team1.name).length===0)
+					currentGame.team1.name="Team 1";
+					
+				if($.trim(currentGame.team2.name).length===0)
+					currentGame.team2.name="Team 2";
+				
+				for (var i = 1; i <= CONFIG.maxTeamPlayers; i++) {
+					if ($("#player" + i).val() !== "") {
+						currentGame.team1.players[currentGame.team1.players.length] = new Player();
+						currentGame.team1.players[currentGame.team1.players.length - 1].name = $("#player" + i).val();
+					}
+					if ($("#player" + i + "_2").val() !== "") {
+						currentGame.team2.players[currentGame.team2.players.length] = new Player();
+						currentGame.team2.players[currentGame.team2.players.length - 1].name = $("#player" + i + "_2").val();
+					}
+				}
+				
+				if(currentGame.team1.players.length==0)
+				{
+					currentGame.team1.players[currentGame.team1.players.length] = new Player();
+					currentGame.team1.players[currentGame.team1.players.length - 1].name = "Player 1";
+				}
+				if(currentGame.team2.players.length==0)
+				{
+					currentGame.team2.players[currentGame.team2.players.length] = new Player();
+					currentGame.team2.players[currentGame.team2.players.length - 1].name = "Player 2";
+				}
+				
+				nextAtBat();
+
+				currentGameIndex = games.length;
+				currentSeasonIndex = -1;
+				games[currentGameIndex] = currentGame;
+				undos = [];
+				redos = [];
+				undos[0] = JSON.stringify(currentGame);
+				saveGames(games);
+
+				$.mobile.changePage($("#game"),
+						{
+						  changeHash: true,
+						  dataUrl: "#game&ui-page=game" + currentGameIndex
+						});
+				e.preventDefault();
+				return false;
+			});
+		}
+	}
+	
+	
 	function bindNewGame()
 	{
 		"use strict";
@@ -22868,6 +23397,52 @@ $( document ).bind( "pagecreate create", function( e ){
 		},CONFIG.clearDelay);
 	}
 	
+	 
+/*************** bigleague.home.js ***********/
+
+	function bindHome()
+	{
+		"use strict";
+		if(games.length===0)
+			$("a[href='#continue']").hide();
+		else
+			$("a[href='#continue']").show();
+		
+		
+		if(games.length===0 && !CONFIG.connectToServer)
+			$("a[href='#stats']").hide();
+		else
+			$("a[href='#stats']").show();
+			
+		setTimeout(function(){	
+			hidePageLoadingMsg();
+		},CONFIG.clearDelay);
+	}
+	function setHomeViewMode()
+	{
+		"use strict";
+		var width = $(window).width();
+		if(width<480)
+		{
+			var backsize='auto 50px';
+			$("#home").css("-moz-background-size",backsize)
+				.css("-webkit-background-size",backsize)
+				.css("-o-background-size",backsize)
+				.css("background-size",backsize);
+			$("#home div.ui-content:first").css("padding-top","50px");
+		}
+		else
+		{
+			var backsize='auto 75px';
+			$("#home").css("-moz-background-size",backsize)
+				.css("-webkit-background-size",backsize)
+				.css("-o-background-size",backsize)
+				.css("background-size",backsize);
+			$("#home div.ui-content:first").css("padding-top","75px");
+		}
+	} 
+/*************** bigleague.gamelist.js ***********/
+
 	var isloading=false;
 	function bindGames()
 	{
@@ -23084,211 +23659,53 @@ $( document ).bind( "pagecreate create", function( e ){
 		}
 	}
 	
-	function bindGame()
+	
+	function getGames()
 	{
 		"use strict";
-		if(!savedgamesloaded)
+		if(localStorage["games"]==null)
+			return [];
+		return JSON.parse(localStorage["games"],gameReviver);
+    }
+	var savedgamesloaded=true;
+    function getSavedGames() {
+		"use strict";
+		if(CONFIG.connectToServer && window.navigator.onLine)
 		{
-			setTimeout(bindGame,100);
-			return;
+			savedgamesloaded=false;
+			$.getJSON(LOAD_URL, function (data) {
+				
+				savedGames = JSON.parse(JSON.stringify(data),gameReviver);
+				//console.log(savedGames);
+				savedgamesloaded=true;
+				setTimeout(function(){	
+					hidePageLoadingMsg();
+				},CONFIG.clearDelay);
+			})
+			.error(function(jqXHR, textStatus, errorThrown) {
+				//console.log("error " + textStatus);
+				//console.log("incoming Text " + jqXHR.responseText);
+				savedGames = [];
+				savedgamesloaded=true;
+				setTimeout(function(){	
+					hidePageLoadingMsg();
+				},CONFIG.clearDelay);
+			})
+			;
 		}
-		if(currentGame==null)
-			return;
-			
-		var atbat = getCurrentAtBat();
-		var awayscore = getTeamScore(currentGame,currentGame.team2);
-		var homescore = getTeamScore(currentGame,currentGame.team1);
-		if(viewMode==="wide")
-		{
-			$("#batterabs").text(getPlayerOutcomes(currentGame,atbat.batter.name,atbatregex, true,false));
-			$("#batterwalks").text(getPlayerOutcomes(currentGame,atbat.batter.name,walkregex, true,false));
-			$("#batterhits").text(getPlayerOutcomes(currentGame,atbat.batter.name,hitregex, true,false));
-			$("#batterrbi").text((getPlayerOutcomesScore(currentGame,atbat.batter.name,hitregex, true)+getPlayerOutcomesScore(currentGame,atbat.batter.name,walkregex, true)));
-			$("#pitcherhits").text(getPlayerOutcomes(currentGame,atbat.pitcher.name,hitregex, false,false));
-			$("#pitcherwalks").text(getPlayerOutcomes(currentGame,atbat.pitcher.name,walkregex, false,false));
-			$("#pitcherstrikeouts").text(getPlayerOutcomes(currentGame,atbat.pitcher.name,strikeoutregex, false,false));
-			$("#pitcherruns").text(getPlayerRunsScored(currentGame,atbat.pitcher.name,false));
-			
-			
-			setBoxScores($("#gameboxscore"));
-		
-			$("#narrowscore").hide();
-			$("#widescore").show();
-		}
-		else
-		{
-			$("#homescore").text(homescore);
-			$("#awayscore").text(awayscore);
-			
-			$("#hometeam").text(currentGame.team1.name);
-			$("#awayteam").text(currentGame.team2.name);
-			
-			$("#widescore").hide();
-			$("#narrowscore").show();
-			
-		}
-		
-		
-		$("#game h1").text(currentGame.team2.name + "(" + awayscore + ")" +
-			" at " + currentGame.team1.name + "(" + homescore + ")");
-		var halfinning = getCurrentHalfInning();
-		$("#batter,#batter_n").text(atbat.batter.name);
-		$("#pitcher,#pitcher_n").text(atbat.pitcher.name);
-		$("#balls,#balls_n").text(atbat.currentballs);
-		$("#strikes,#strikes_n").text(atbat.currentstrikes);
-		$("#outs,#outs_n").text(halfinning.currentouts);
-		$("#inning,#inning_n").text(((halfinning.top)?"top of ":"bottom of ") + halfinning.number);
-		
-		if(atbat.bases==null)
-		{
-			atbat.bases=[];
-			for(var i=0;i<4; i++)
-			{
-				atbat.bases[i] = new Base();
-				atbat.bases[i].number = i+1;
-			}
-		}
-		var $basePath = $("#basePath");
-		
-		if($basePath[0].getContext)
-		{
-			drawBases($basePath,atbat.bases);
-			drawBases($("#basePath_n"),atbat.bases);
-		}
-		else
-		{
-			if(atbat.bases[0].player==null)
-				$("#first,#first_n").text("X");
-			else
-				$("#first,#first_n").text(atbat.bases[0].player.name);
-			if(atbat.bases[1].player==null)
-				$("#second,#second_n").text("X");
-			else
-				$("#second,#second_n").text(atbat.bases[1].player.name);
-			if(atbat.bases[2].player==null)
-				$("#third,#third_n").text("X");
-			else
-				$("#third,#third_n").text(atbat.bases[2].player.name);
-		}
-			
-		
-		if(undos.length<=1)
-			$("#undoli").hide();
-		else
-			$("#undoli").show();
-			
-		if(redos.length===0)
-			$("#redoli").hide();
-		else
-			$("#redoli").show();
-		
-		if((!CONFIG.doublePlayRunnersRequired || atbat.bases[0].player!=null) && halfinning.currentouts<CONFIG.outsPerInning-1)
-			$(".dp:not([data-disabled])").show();
-		else
-			$(".dp:not([data-disabled])").hide();
-			
-		
-		if((atbat.bases[0].player!=null || atbat.bases[1].player!=null || atbat.bases[2].player!=null) && halfinning.currentouts<2)
-			$(".sac:not([data-disabled])").show();
-		else
-			$(".sac:not([data-disabled])").hide();
-		
-		if((currentGame.season && currentGame.season.length>0) || !window.navigator.onLine || !CONFIG.connectToServer)
-			$("#server").hide();	
-		else
-			$("#server").show();
-		
-		if($("#other").nextAll("li:visible").length===0)
-			$("#other").hide();
-		else
-			$("#other").show();
-		/*
-		if(currentGame.halfinnings.length%2 === 0  && currentgame.halfinnings.length/2 >= currentGame.innings
-			&& getTeamScore(currentGame,currentGame.team1) !== getTeamScore(currentGame,currentGame.team2) )
-		{ // game over!
-			$("li:visible:not(#other,#undoli,#redoli,#gameover)").hide();
-			$("#gameover").show();
-		}
-		else
-		{
-			$("li:visible:not(#other,#undoli,#redoli,#gameover)").show();
-			$("#gameover").hide();
-		}
-		*/
-		setTimeout(function(){	
-			hidePageLoadingMsg();
-		},CONFIG.clearDelay);
-	}
-	
-	var draw_current_bases=null;
-	function drawBases($canvas, bases)
+    }
+	function saveGames(games)
 	{
 		"use strict";
-		if(bases==null)
-			bases = draw_current_bases;
-		else
-			draw_current_bases = bases;
-		
-		if(bases==null)
-			return;
-			
-		$canvas.attr("width",1)
-			.attr("height",1);
-			
-		var basePathCw = $canvas.parent().width();
-		var basePathCh  = $canvas.parent().parent().height()-4;
-		var minSide = Math.min(basePathCw, basePathCh);
-		if(minSide>0)
-		{
-			var diamondsize = minSide*(.7);
-			var basesize = diamondsize/4.0;
-			
-			$canvas.attr("width",basePathCw)
-				.attr("height",basePathCh);
-			var basePathC = $canvas[0].getContext('2d');
-			
-			basePathC.strokeStyle = "#947333";
-			basePathC.fillStyle = "#D6522C";//"#5E87B0";
-			var translateX = (basePathCw-diamondsize)/2.0;
-			var translateY = (basePathCh-diamondsize)/2.0;
-			
-			var tranCenterX = basePathCw/2.0;
-			var tranCenterY = basePathCh/2.0;
-			
-			// draw a set of rotated squares, shifted to center of canvas
-			
-			// need to do rotation  with upperleft at center of canvas and then go back
-			// http://stackoverflow.com/questions/9402631/opengl-translate-down-on-y-and-rotate-on-z-around-element-center-on-android
-			basePathC.translate(tranCenterX ,tranCenterY);
-			basePathC.rotate(45.0*Math.PI/180.0);
-			basePathC.translate(-tranCenterX ,-tranCenterY);
-			
-			// move it to to center point
-			basePathC.translate(translateX,translateY);
-			
-			//diamond
-			basePathC.strokeRect(0,0,diamondsize,diamondsize);
-			
-			//first base	
-			basePathC.strokeRect(diamondsize-basesize,0,basesize,basesize);
-			if(bases[0].player!=null)
-				basePathC.fillRect(diamondsize-basesize,0,basesize,basesize);
-				
-			//second base
-			basePathC.strokeRect(0,0,basesize,basesize);
-			if(bases[1].player!=null)
-				basePathC.fillRect(0,0,basesize,basesize);
-			
-			// third base	
-			basePathC.strokeRect(0,diamondsize-basesize,basesize,basesize);
-			if(bases[2].player!=null)
-				basePathC.fillRect(0,diamondsize-basesize,basesize,basesize);
-				
-			//home
-			basePathC.strokeRect(diamondsize-basesize,diamondsize-basesize,basesize,basesize);
-		}
-	}
-	
+		if(savedgamesloaded)
+			post();
+		undos[undos.length] = JSON.stringify(currentGame);
+		localStorage["games"] = JSON.stringify(games);
+	} 
+/*************** bigleague.scoregamelogic.js ***********/
+
+
+
 	var isprocessing=false;
 	function processPitch(pitchCode, fieldedBy)
 	{
@@ -23599,145 +24016,6 @@ $( document ).bind( "pagecreate create", function( e ){
 		
 	}
 	
-	function setupRules()
-	{
-		"use strict";
-		if(!CONFIG.doublePlayOnFly)
-		{
-			$(".fly .dp").hide().attr("data-disabled","");
-		}
-		else
-		{
-			$(".fly .dp").show().removeAttr("data-disabled");
-		}
-		if(!CONFIG.doublePlayOnLine)
-		{
-			$(".linedrive .dp").hide().attr("data-disabled","");
-		}
-		else
-		{
-			$(".linedrive .dp").show().removeAttr("data-disabled");
-		}
-		if(!CONFIG.ceilingOuts)
-		{
-			$(".ceiling").hide().attr("data-disabled","");
-		}
-		else
-		{
-			$(".ceiling").show().removeAttr("data-disabled");
-		}
-		if(!CONFIG.flySingles)
-		{
-			$(".fly .single").hide().attr("data-disabled","");
-		}
-		else
-		{
-			$(".fly .single").show().removeAttr("data-disabled","");
-		}
-		if(!CONFIG.lineSingles)
-		{
-			$(".linedrive .single").hide().attr("data-disabled","");
-		}
-		else
-		{
-			$(".linedrive .single").show().removeAttr("data-disabled");
-		}
-		if(CONFIG.doublePlayAdvanceOnFailed<=0)
-		{
-			$(".faileddp").hide().attr("data-disabled","");
-		}
-		else
-		{
-			$(".faileddp").show().removeAttr("data-disabled");
-		}
-		if(!CONFIG.overSpeedWalk)
-		{
-			$(".overspeed").hide().attr("data-disabled","");
-		}
-		else
-		{
-			$(".overspeed").show().removeAttr("data-disabled");
-		}
-		if(!CONFIG.halfInningSkip)
-		{
-			$(".halfInningSkip").hide().attr("data-disabled","");
-		}
-		else
-		{
-			$(".halfInningSkip").show().removeAttr("data-disabled");
-		}
-		if(!CONFIG.sacFlys)
-		{
-			$(".sac").hide().attr("data-disabled","");
-		}
-		else
-		{
-			$(".sac").show().removeAttr("data-disabled");
-		}
-		
-		try
-		{ // might not be previously init'd
-			$("#game ul").listview("refresh");
-		}
-		catch(exc){
-		}
-	}
-	var setupFieldersRunning=false;
-	function setupFielders()
-	{
-		"use strict";
-		
-		if($("#game ul.inplay").is(":visible")) //just clicked, hide to prevent extra click
-		{
-			$("#game ul.inplay").hide();
-		}
-		try // updating fielders before init screws stuff up.  test for it.
-		{ // might not be previously init'd
-			$("#game ul.inplay").listview("refresh");
-		}
-		catch(exc){
-			setTimeout(setupFielders,100);
-			return;
-		}
-		if(!setupFieldersRunning)
-		{
-			setupFieldersRunning=true;
-			var fielded = $("li:has(a[data-fielded-by])");
-			fielded.find("a[data-fielded-by]").attr("data-fielded-by","");
-			fielded.find("span.fieldedby").remove();
-			for(var i=fielded.length; i>=0; i--) // clear previous fielders
-			{
-				var pitch = fielded.eq(i).find("a[data-fielded-by]").attr("data-pitch");
-				
-				if(pitch)
-				{
-					var els = fielded.filter(":has([data-pitch="+pitch+"])").slice(1);
-					i-=els.length;
-					els.remove();
-					fielded = $("li:has(a[data-fielded-by])");
-				}
-			}
-			//return;
-			var teamfielding = getCurrentTeamFielding();
-			for(var i=0; i<fielded.length; i++) // dupe fielding items for each fielder
-			{
-				var item = fielded.eq(i);
-				for(var j=1; j<teamfielding.players.length; j++)
-				{
-					var newi = item.clone();
-					newi.find("a[data-fielded-by]").attr("data-fielded-by",teamfielding.players[j].name)
-						.append("<span class='fieldedby'> By "+teamfielding.players[j].name+"</span>");
-					
-					item.after(newi);
-				}
-					item.find("a[data-fielded-by]").attr("data-fielded-by",teamfielding.players[0].name)
-						.append("<span class='fieldedby'> By "+teamfielding.players[0].name+"</span>");
-			}
-			
-			$("#game ul.inplay").listview("refresh");
-			setupFieldersRunning=false;
-		}
-	}
 	
 	function advanceRunners(count, pushAll, outsInPlay)
 	{
@@ -23818,99 +24096,8 @@ $( document ).bind( "pagecreate create", function( e ){
 		"use strict";
 		return getCurrentHalfInning().teambatting;
 	}
-	function gameReviver(key, value)
-	{
-		"use strict";
 	
-		// if this is a game object and it is missing a getId function, set it up
-		if(value!=null && value.players!=null && value.currentbatter!=null
-			 && value.currentpitcher!=null && value.name!=null && value.getId==null)
-		{
-			value.getId = function(){
-				
-				var id = this.name;
-				for(var i=0;i<this.players.length; i++)
-					id += this.players[i].name;
-				return id;
-			};
-		}
-		// if this is a game object and it is missing a innings property - set it to default
-		if(value!=null && value.players!=null && value.currentbatter!=null
-			 && value.currentpitcher!=null && value.name!=null && value.innings==null)
-			value.innings = CONFIG.inningsPerGame;
-			
-			
-		// if this is a atbat object and it is missing a runnersOut property - set it to default
-		if(value!=null && value.pitcher!=null && value.pitcherIndex!=null
-			 && value.batter!=null && value.batterIndex!=null && value.runnersOut==null)
-			value.runnersOut = [];
-			
-			
-		return value;
-	}
-	function getGames()
-	{
-		"use strict";
-		if(localStorage["games"]==null)
-			return [];
-		return JSON.parse(localStorage["games"],gameReviver);
-    }
-	function getConfig()
-	{
-		"use strict";
-		if(localStorage["config"]==null)
-			return CONFIG;
-		var config = JSON.parse(localStorage["config"]);
-		if(config.pushRunnersOnHit==null)
-			config.pushRunnersOnHit = true;
-		if(config.startingBalls==null)
-			config.startingBalls = 0;
-		if(config.startingStrikes==null)
-			config.startingStrikes = 0;
-		if(config.halfInningSkip==null)
-			config.halfInningSkip = true;
-		return config;
-    }
-	var savedgamesloaded=true;
-    function getSavedGames() {
-		"use strict";
-		if(CONFIG.connectToServer && window.navigator.onLine)
-		{
-			savedgamesloaded=false;
-			$.getJSON(LOAD_URL, function (data) {
-				
-				savedGames = JSON.parse(JSON.stringify(data),gameReviver);
-				//console.log(savedGames);
-				savedgamesloaded=true;
-				setTimeout(function(){	
-					hidePageLoadingMsg();
-				},CONFIG.clearDelay);
-			})
-			.error(function(jqXHR, textStatus, errorThrown) {
-				//console.log("error " + textStatus);
-				//console.log("incoming Text " + jqXHR.responseText);
-				savedGames = [];
-				savedgamesloaded=true;
-				setTimeout(function(){	
-					hidePageLoadingMsg();
-				},CONFIG.clearDelay);
-			})
-			;
-		}
-    }
-	function saveGames(games)
-	{
-		"use strict";
-		if(savedgamesloaded)
-			post();
-		undos[undos.length] = JSON.stringify(currentGame);
-		localStorage["games"] = JSON.stringify(games);
-	}
-	function saveConfig()
-	{
-		"use strict";
-		localStorage["config"] = JSON.stringify(CONFIG);
-	}
+	
 	function undo()
 	{
 		"use strict";
@@ -23935,40 +24122,9 @@ $( document ).bind( "pagecreate create", function( e ){
 			redos.remove(redos.length-1);
 			bindGame();
 		}
-	}
-	function post()
-	{
-		"use strict";
-		if(CONFIG.connectToServer && window.navigator.onLine)
-		{
-			if(currentGame && currentGame.season && currentGame.season.length>0)
-			{
-				var gamename = currentGame.team2.name + " at " + currentGame.team1.name;
-				$.post(POST_URL, 
-					{
-						json: JSON.stringify(currentGame), 
-						name: gamename, 
-						id: currentGame.id,
-						season: currentGame.season
-					},
-					function(data){
-						
-						if(data.id)
-						{
-							currentGame.id=data.id;
-						}
-					});
-			}
-		}
-	}
-	function output()
-	{
-		"use strict";
-		console.log(currentGame);
-		console.log(JSON.stringify(currentGame));
-	}
-	
-	
+	} 
+/*************** bigleague.gamestats.js ***********/
+
 	function bindGameStats()
 	{
 		"use strict";
@@ -24005,52 +24161,9 @@ $( document ).bind( "pagecreate create", function( e ){
 		setTimeout(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
-	}
-	function getOuterHTML($element)
-	{
-		return $element.clone().wrap('<div>').parent().html();
-	}
-	function addTableStatHeader($table)
-	{
-		"use strict";
-		$table.find("thead tr").append("<th title='players name'>Name</th>");
-		$table.find("thead tr").append("<th title='games played'>GP</th>");
-		$table.find("thead tr").append("<th title='innings played'>IP</th>");
-		$table.find("thead tr").append("<th title='hits'>H</th>");
-		$table.find("thead tr").append("<th title='hits per inning'>H/I</th>");
-		$table.find("thead tr").append("<th title='runs batted in'>RBI</th>");
-		$table.find("thead tr").append("<th title='RBI per inning'>RBI/I</th>");
-		$table.find("thead tr").append("<th title='runs scored'>R</th>");
-		$table.find("thead tr").append("<th title='runs per inning'>R/I</th>");
-		$table.find("thead tr").append("<th title='walks'>W</th>");
-		$table.find("thead tr").append("<th title='walk percentage'>W%</th>");
-		$table.find("thead tr").append("<th title='errors'>E</th>");
-		$table.find("thead tr").append("<th title='at bats'>AB</th>");
-		$table.find("thead tr").append("<th title='strikeouts'>K</th>");
-		$table.find("thead tr").append("<th title='strikeout percentage'>K%</th>");
-		$table.find("thead tr").append("<th title='batting average'>AVG</th>");
-		$table.find("thead tr").append("<th title='plate appearances'>PA</th>");
-		$table.find("thead tr").append("<th title='on base percentage'>OB%</th>");
-		$table.find("thead tr").append("<th title='singles'>1B</th>");
-		$table.find("thead tr").append("<th title='singles per inning'>1B/I</th>");
-		$table.find("thead tr").append("<th title='doubles'>2B</th>");
-		$table.find("thead tr").append("<th title='doubles per inning'>2B/I</th>");
-		$table.find("thead tr").append("<th title='triples'>3B</th>");
-		$table.find("thead tr").append("<th title='triples per inning'>3B/I</th>");
-		$table.find("thead tr").append("<th title='home runs'>HR</th>");
-		$table.find("thead tr").append("<th title='home runs per inning'>HR/I</th>");
-		$table.find("thead tr").append("<th title='total bases'>TB</th>");
-		$table.find("thead tr").append("<th title='total bases per inning'>TB/I</th>");
-		$table.find("thead tr").append("<th title='slugging percentage'>SLG</th>");
-		$table.find("thead tr").append("<th title='on base plus slugging'>OPS</th>");
-		$table.find("thead tr").append("<th title='pitches'>P</th>");
-		$table.find("thead tr").append("<th title='pitches per inning'>P/I</th>");
-		$table.find("thead tr").append("<th title='balls'>B</th>");
-		$table.find("thead tr").append("<th title='strikes'>S</th>");
-		$table.find("thead tr").append("<th title='strike percentage'>S%</th>");
-		$table.find("thead tr").append("<th title='swings'>SW</th>");
-		$table.find("thead tr").append("<th title='swing percentage'>SW%</th>");
-	}
+	} 
+/*************** bigleague.seasonstats.js ***********/
+
 	function bindSeasonStat($table,games,isbatting)
 	{
 		"use strict";
@@ -24117,303 +24230,244 @@ $( document ).bind( "pagecreate create", function( e ){
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}
-		
-	function addPlayerStats($tr,currentGame,player, isbatting)
-	{
-		"use strict";
-		if(player.name!=null)
-			player = player.name;
-		if(isbatting==null)
-			isbatting = true;
-			
-		
-		var gp = getPlayerGames(currentGame,player,isbatting);
-		var ip = getPlayerInnings(currentGame,player,isbatting);
-		var pas = getPlayerOutcomes(currentGame,player,plateappearanceregex, isbatting);
-		var abs = getPlayerOutcomes(currentGame,player,atbatregex, isbatting);
-		var ks = getPlayerOutcomes(currentGame,player,strikeoutregex, isbatting);
-		var hits = getPlayerOutcomes(currentGame,player,hitregex, isbatting);
-		var rbi = (getPlayerOutcomesScore(currentGame,player,hitregex, isbatting)+getPlayerOutcomesScore(currentGame,player,walkregex, isbatting));
-		var walks = getPlayerOutcomes(currentGame,player,walkregex, isbatting);
-		var errors = getPlayerOutcomes(currentGame,player,errorregex, isbatting);
-		var ob = roundNumber((hits+walks)/pas,3);
-		var singles = getPlayerOutcomes(currentGame,player,singleregex, isbatting);
-		var doubles = getPlayerOutcomes(currentGame,player,doubleregex, isbatting);
-		var triples = getPlayerOutcomes(currentGame,player,tripleregex, isbatting);
-		var homeruns = getPlayerOutcomes(currentGame,player,homerregex, isbatting);
-		var runs = getPlayerRunsScored(currentGame,player,isbatting);
-		
-		var pitches = getPlayerPitches(currentGame,player,pitchregex, isbatting);
-		var balls = getPlayerPitches(currentGame,player,ballregex, isbatting);
-		var strikes = (pitches-balls);
-		var swings = getPlayerPitches(currentGame,player,swingregex, isbatting);
-		
-		var tb = singles +
-			doubles*2 +
-			triples*3 +
-			homeruns*4;
-			
-		var slg = roundNumber(tb/abs,3);
-		
-		$tr.append("<th>"+player+"</th>");
-		$tr.append("<td>"+gp+"</td>");
-		$tr.append("<td>"+ip+"</td>");
-		
-		$tr.append("<td>"+hits+"</td>");
-		$tr.append("<td>"+roundNumber(hits/ip,3)+"</td>");
-			
 	
-		$tr.append("<td>"+rbi+"</td>");
-		$tr.append("<td>"+roundNumber(rbi/ip,3)+"</td>");
-		
-		$tr.append("<td>"+runs+"</td>");
-		$tr.append("<td>"+roundNumber(runs/ip,3)+"</td>");
-		
-		$tr.append("<td>"+walks+"</td>");
-		
-		
-		$tr.append("<td>"+roundNumber(walks/pas,3)+"</td>");
-		
-		$tr.append("<td>"+errors+"</td>");
-		
-		$tr.append("<td>"+abs+"</td>");
-		
-		$tr.append("<td>"+ks+"</td>");
-		
-		
-		$tr.append("<td>"+roundNumber(ks/pas,3)+"</td>");
-		
-		
-		$tr.append("<td>"+roundNumber(hits/abs,3)+"</td>");
-		
-		
-		$tr.append("<td>"+pas+"</td>");
-		
-		$tr.append("<td>"+ob+"</td>");
-		
-		$tr.append("<td>"+singles+"</td>");
-		
-		$tr.append("<td>"+roundNumber(singles/ip,3)+"</td>");
-		
-		$tr.append("<td>"+doubles+"</td>");
-		
-		$tr.append("<td>"+roundNumber(doubles/ip,3)+"</td>");
-		
-		$tr.append("<td>"+triples+"</td>");
-		
-		$tr.append("<td>"+roundNumber(triples/ip,3)+"</td>");
-		
-		$tr.append("<td>"+homeruns+"</td>");
-		
-		$tr.append("<td>"+roundNumber(homeruns/ip,3)+"</td>");
-		
-			
-		$tr.append("<td>"+tb+"</td>");
-		
-		$tr.append("<td>"+roundNumber(tb/ip,3)+"</td>");
-		
-		$tr.append("<td>"+slg+"</td>");
-		
-		$tr.append("<td>"+roundNumber(parseFloat(slg)+parseFloat(ob),3)+"</td>");
-		
-		$tr.append("<td>"+pitches+"</td>");
-		
-		$tr.append("<td>"+roundNumber(pitches/ip,3)+"</td>");
-		$tr.append("<td>"+balls+"</td>");
-		$tr.append("<td>"+strikes+"</td>");
-		
-		$tr.append("<td>"+roundNumber(strikes/pitches,3)+"</td>");
-		
-		$tr.append("<td>"+swings+"</td>");
-		
-		$tr.append("<td>"+roundNumber(swings/pitches,3)+"</td>");
-		
-	}
+	 
+/**************** bigleague.main.js ****************/
+
+	var currentGame;
+	var currentGameIndex;
+	var currentSeasonIndex=-1;
+	var games;
+	var savedGames;
+	var viewMode="wide";
 	
-	function setTeamStats($table,team, isbatting)
-	{
+	var undos = [];
+	var redos  = [];
+
+	var clk = null;
+	
+	$(function () {
 		"use strict";
-		$table.find("tr").remove();
-		$table.find("thead").append("<tr/>");
-		for(var i=0; i<team.players.length+1; i++)
-			$table.find("tbody").append("<tr/>");
-			
-		addTableStatHeader($table);
 		
-		for(var i=0; i<team.players.length; i++)
+		if('ontouchstart' in document.documentElement)
 		{
-			var $tr = $table.find("tbody tr:eq("+i+")");
-			addPlayerStats($tr,currentGame,team.players[i],isbatting);
+			CONFIG.isMobile = true;
+			//CONFIG.clickEvent = 'tap';
 		}
-		
-		if(isbatting)
+		else
 		{
-		
-			var gp = getTeamGames(currentGame,team);
-			var ip = getTeamInnings(currentGame,team, isbatting);
-			var pas = getTeamOutcomes(currentGame,team,plateappearanceregex, isbatting);
-			var abs = getTeamOutcomes(currentGame,team,atbatregex, isbatting);
-			var ks = getTeamOutcomes(currentGame,team,strikeoutregex, isbatting);
-			var hits = getTeamOutcomes(currentGame,team,hitregex, isbatting);
-			var rbi = (getTeamOutcomesScore(currentGame,team,hitregex, isbatting)+getTeamOutcomesScore(currentGame,team,walkregex, isbatting));
-			var walks = getTeamOutcomes(currentGame,team,walkregex, isbatting);
-			var errors = getTeamOutcomes(currentGame,team,errorregex, isbatting);
-			var ob = roundNumber((hits+walks)/pas,3);
-			var singles = getTeamOutcomes(currentGame,team,singleregex, isbatting);
-			var doubles = getTeamOutcomes(currentGame,team,doubleregex, isbatting);
-			var triples = getTeamOutcomes(currentGame,team,tripleregex, isbatting);
-			var homeruns = getTeamOutcomes(currentGame,team,homerregex, isbatting);
-			
-			var pitches = getTeamPitches(currentGame,team,pitchregex,isbatting);
-			var balls = getTeamPitches(currentGame,team,ballregex,isbatting);
-			var strikes = (pitches-balls);
-			var swings = getTeamPitches(currentGame,team,swingregex, isbatting);
-			var runs = 0;
-			
-			var tb = singles +
-				doubles*2 +
-				triples*3 +
-				homeruns*4;
-				
-			var slg = roundNumber(tb/abs,3);
-				
-			var $tr = $table.find("tbody tr:eq("+team.players.length+")");
-			$tr.append("<th>"+team.name+"</th>");
-			
-			$tr.append("<td>"+gp+"</td>");
-			$tr.append("<td>"+ip+"</td>");
-			
-			$tr.append("<td>"+hits+"</td>");
-			$tr.append("<td>"+roundNumber(hits/ip,3)+"</td>");
-		
-			$tr.append("<td>"+rbi+"</td>");
-			$tr.append("<td>"+roundNumber(rbi/ip,3)+"</td>");
-
-			
-			$tr.append("<td>"+runs+"</td>");
-			$tr.append("<td>"+roundNumber(runs/ip,3)+"</td>");
-
-			
-			$tr.append("<td>"+walks+"</td>");
-			
-			$tr.append("<td>"+roundNumber(walks/pas,3)+"</td>");
-
-			
-			$tr.append("<td>"+errors+"</td>");
-			
-			$tr.append("<td>"+abs+"</td>");
-			
-			$tr.append("<td>"+ks+"</td>");
-			
-			$tr.append("<td>"+roundNumber(ks/pas,3)+"</td>");
-
-			
-			$tr.append("<td>"+roundNumber(hits/abs,3)+"</td>");
-
-			
-			$tr.append("<td>"+pas+"</td>");
-			
-			$tr.append("<td>"+ob+"</td>");
-			
-			$tr.append("<td>"+singles+"</td>");
-			$tr.append("<td>"+roundNumber(singles/ip,3)+"</td>");
-
-			
-			$tr.append("<td>"+doubles+"</td>");
-			$tr.append("<td>"+roundNumber(doubles/ip,3)+"</td>");
-
-			
-			$tr.append("<td>"+triples+"</td>");
-			$tr.append("<td>"+roundNumber(triples/ip,3)+"</td>");
-
-			
-			$tr.append("<td>"+homeruns+"</td>");
-			$tr.append("<td>"+roundNumber(homeruns/ip,3)+"</td>");
-
-			
-				
-			$tr.append("<td>"+tb+"</td>");
-			$tr.append("<td>"+roundNumber(tb/ip,3)+"</td>");
-
-			
-			$tr.append("<td>"+slg+"</td>");
-			
-			$tr.append("<td>"+roundNumber(parseFloat(slg)+parseFloat(ob),3)+"</td>");
-			
-			$tr.append("<td>"+pitches+"</td>");
-			$tr.append("<td>"+roundNumber(pitches/ip,3)+"</td>");
-
-			$tr.append("<td>"+balls+"</td>");
-			$tr.append("<td>"+strikes+"</td>");
-			$tr.append("<td>"+roundNumber(strikes/pitches,3)+"</td>");
-
-			$tr.append("<td>"+swings+"</td>");
-			$tr.append("<td>"+roundNumber(swings/pitches,3)+"</td>");
-
+			CONFIG.processDelay = 0;
+			//CONFIG.clearDelay = 0;
 		}
-	
-	}
-	function setBoxScores($table)
-	{
-		"use strict";
-		if(currentGame!=null)
+		if(CONFIG.defaultTransition!=null)
+			$.mobile.defaultPageTransition=CONFIG.defaultTransition;
+		
+		// turn on saving for 'secret' season url
+		try
 		{
-			$table.find("tr").remove();
-			$table.find("thead").append("<tr/>");
-			$table.find("tbody").append("<tr/>").append("<tr/>");
-			
-			$table.find("thead tr").append("<th>Team</th>");
-			$table.find("tbody tr:eq(0)").append("<th>"+currentGame.team2.name+"</th>");
-			$table.find("tbody tr:eq(1)").append("<th>"+currentGame.team1.name+"</th>");
-			
-			$table.find("thead tr").append("<th class='spacer'>&nbsp;</th>");
-			$table.find("tbody tr:eq(0)").append("<th class='spacer'>&nbsp;</th>");
-			$table.find("tbody tr:eq(1)").append("<th class='spacer'>&nbsp;</th>");
-			
-			for(var i=0; i<currentGame.halfinnings.length; i++)
+			if(window.navigator.onLine)  
 			{
-				if(currentGame.halfinnings[i].atbats[0].pitches.length===0)
-				{ // very start of halfinning - post a 0
-					if(i%2===0) //top of inning, add header too
-						$table.find("thead tr").append("<th>"+((i/2)+1)+"</th>");
-					$table.find("tbody tr:eq("+(i%2)+")").append("<td>0</td>");
-					continue;
-				}
-				if(i%2===0)
+				if(window.location.href.indexOf("season/")!==-1)
 				{
-					$table.find("thead tr").append("<th>"+((i/2)+1)+"</th>");
-					
-					$table.find("tbody tr:eq(0)").append("<td>"+getHalfInningScore(currentGame.halfinnings[i])+"</td>");
+					CONFIG.connectToServer = true;
 				}
-				else
-				{
-					$table.find("tbody tr:eq(1)").append("<td>"+getHalfInningScore(currentGame.halfinnings[i])+"</td>");
-				}
+			
 			}
-			if($table.find("tbody tr:eq(0) td, tbody tr:eq(0) th").length>$table.find("tbody tr:eq(1) td,tbody tr:eq(1) th").length)
-				$table.find("tbody tr:eq(1)").append("<td>&nbsp;</td>");
-			
-			$table.find("thead tr").append("<th class='spacer'>&nbsp;</th>");
-			$table.find("tbody tr:eq(0)").append("<td class='spacer'>&nbsp;</td>");
-			$table.find("tbody tr:eq(1)").append("<td class='spacer'>&nbsp;</td>");
-			
-			$table.find("thead tr").append("<th>R</th>");
-			$table.find("tbody tr:eq(0)").append("<th>"+getTeamScore(currentGame,currentGame.team2)+"</th>");
-			$table.find("tbody tr:eq(1)").append("<th>"+getTeamScore(currentGame,currentGame.team1)+"</th>");
-			
-			
-			$table.find("thead tr").append("<th>H</th>");
-			$table.find("tbody tr:eq(0)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team2,hitregex)+"</td>");
-			$table.find("tbody tr:eq(1)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team1,hitregex)+"</td>");
-		
-			
-			
-			$table.find("thead tr").append("<th>E</th>");
-			$table.find("tbody tr:eq(0)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team1,errorregex)+"</td>");
-			$table.find("tbody tr:eq(1)").append("<td>"+getTeamOutcomes(currentGame,currentGame.team2,errorregex)+"</td>");
 		}
+		catch(exc){}
+		if(CONFIG.connectToServer && window.navigator.onLine)
+		{
+			if(window.location.protocol!=="http" && window.location.protocol!=="https")
+			{ // file:// mode/etc
+				LOAD_URL = CONFIG.server+"/"+LOAD_URL;
+				POST_URL = CONFIG.server+"/"+POST_URL;
+			}
+		}
+		
+	    games = getGames();
+		CONFIG = getConfig();
+	    getSavedGames();
+		
+		if(CONFIG.isMobile)
+		{
+			window.top.scrollTo(0, 1); //hide iOS address bar
+			$(document).live("orientationchange", function(ev){
+				processSizeChange();
+			});
+		}
+		else
+		{
+			$(window).bind("resize", function(ev){
+				processSizeChange();
+			});
+		}
+		setHomeViewMode();
+		setGameViewMode();
+		
+	    $("#home").live("pageshow", function () {
+			showPageLoadingMsg();
+			setTimeout(bindHome,
+				CONFIG.processDelay);
+	    })
+		.live("pagebeforeshow",function(){
+			showPageLoadingMsg($(this));
+		});
+		bindHome();
+		
+	    $("#continue,#stats").live("pageshow", function () {
+			showPageLoadingMsg();
+			setTimeout(bindGames,
+				CONFIG.processDelay);
+	    })
+		.live("pagebeforeshow",function(){
+			showPageLoadingMsg($(this));
+		});
+	    bindGames();
+		
+		
+		$("#config").live("pageshow",function(){
+			showPageLoadingMsg();
+			setTimeout(bindConfig,
+				CONFIG.processDelay);
+		})
+		.live("pagebeforeshow",function(){
+			showPageLoadingMsg($(this));
+		});
+		bindConfig();
+
+		$("#newgame").live("pageshow",function(){
+			showPageLoadingMsg();
+			setTimeout(bindNewGame,
+				CONFIG.processDelay);
+		})
+		.live("pagebeforeshow",function(){
+			showPageLoadingMsg($(this));
+		});
+		bindNewGame();
+		
+	    // grab and use the 'subpage navigation value' for current game, if any
+	    // couldn't find out how to do this directly in jqmobile
+	    var gameregex = /.*\#game(stats)?\&ui-page=game(\d*)(\&season(\d*))?/ig;
+	    var matches = gameregex.exec(window.location.href);
+	    if (matches != null && matches.length > 1) {
+			showPageLoadingMsg();
+			currentGameIndex = parseInt(matches[2]);
+			
+			if(matches.length>4 && matches[4]!=null)
+				currentSeasonIndex = parseInt(matches[4]);
+			else
+				currentSeasonIndex = -1;
+			
+			setTimeout(loadCurrentGame,
+				CONFIG.processDelay);
+	    }
+
+	    // grab and use the 'subpage navigation value' for current season, if any
+	    // couldn't find out how to do this directly in jqmobile
+	    var seasonregex = /.*\#seasonstats?\&ui-page=season(\-?\d*)/ig;
+		matches = seasonregex.exec(window.location.href);
+	    if (matches != null && matches.length > 1) {
+			showPageLoadingMsg();
+			currentSeasonIndex = parseInt(matches[1]);
+			setTimeout(bindSeasonStats,
+				CONFIG.processDelay);
+	    }
+		
+	    $("#game").live("pageshow", function () {
+			showPageLoadingMsg();
+			setTimeout(loadCurrentGame,
+				CONFIG.processDelay);
+	    })
+		.live("pagebeforeshow",function(){
+			showPageLoadingMsg($(this));
+		});
+	    $("#gamestats").live("pageshow", function () {
+			showPageLoadingMsg();
+			setTimeout(bindGameStats,
+				CONFIG.processDelay);
+	    })
+		.live("pagebeforeshow",function(){
+			showPageLoadingMsg($(this));
+		});
+	    $("#seasonstats").live("pageshow", function () {
+			showPageLoadingMsg();
+			setTimeout(bindSeasonStats,
+				CONFIG.processDelay);
+	    })
+		.live("pagebeforeshow",function(){
+			showPageLoadingMsg($(this));
+		});
+		gameInit();
+		newGameInit();
+		configInit();
+	});
+	
+	function loadCurrentGame()
+	{
+		"use strict";
+		if(!savedgamesloaded)
+		{
+			setTimeout(loadCurrentGame,100);
+			return;
+		}
+		var prevGame = currentGame;
+		
+		if(currentSeasonIndex===-1 )
+			currentGame = games[currentGameIndex];
+		else
+			currentGame = savedGames[currentSeasonIndex].games[currentGameIndex];
+			
+			
+		redos = [];
+		if(prevGame!==currentGame) // only on game init
+		{
+			undos = [];
+			undos[0] = JSON.stringify(currentGame);
+			setupRules();
+		}
+		bindGame();
+		bindGameStats();
+		setupFielders();
+		setGameViewMode();
 	}
 	
+	function processSizeChange()
+	{
+		"use strict";
+		if($("#game:visible").size()>0)
+			setGameViewMode();
+		else if($("#home:visible").size()>0)
+			setHomeViewMode();
+	}
+	function showPageLoadingMsg($page)
+	{
+		if($page==null)
+			$page = $('.ui-page:visible');
+		//$.mobile.showPageLoadingMsg(); //doesn't work
+		// http://stackoverflow.com/questions/7420023/jquery-mobile-problems-getting-showpageloadingmsg-to-work-with-pagebeforeshow
+		$('body').addClass('ui-loading');
+		$page.addClass('disabled');
+	}
+	function hidePageLoadingMsg($page)
+	{
+		if($page==null)
+			$page = $('.ui-page:visible');
+		//$.mobile.hidePageLoadingMsg(); //doesn't work
+		// http://stackoverflow.com/questions/7420023/jquery-mobile-problems-getting-showpageloadingmsg-to-work-with-pagebeforeshow
+		$('body').removeClass('ui-loading');
+		$page.removeClass('disabled');
+	}
+	function setToggleOption(selector,toggled)
+	{
+		$(selector+" option[value='"+(toggled?"on":"off")+"']").attr("selected","selected");
+		$(selector).slider('refresh');
+	}
+	
+	function getOuterHTML($element)
+	{
+		return $element.clone().wrap('<div>').parent().html();
+	}
+		
 	function roundNumber(num, dec) {
 		"use strict";
 		var result;
