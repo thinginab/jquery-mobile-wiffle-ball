@@ -96,11 +96,36 @@
 				}
 				else if(vals[0]==="out")
 				{
-					atbat.runnersOut[atbat.runnersOut.length] = atbat.batter;
-					batterOut();
-					if(vals.length>2 && vals[1]=="skip")
+					if(vals[vals.length-1]==="fc")
 					{
-						atbat.runsScored+=parseInt(vals[2]);
+						var halfinning = getCurrentHalfInning();
+						halfinning.currentouts++;
+						for(var i=atbat.bases.length-1; i>=0; i--)
+						{
+							if(atbat.bases[i].player!=null)
+							{
+								atbat.runnersOut[atbat.runnersOut.length] = atbat.bases[i].player;
+								break;
+							}
+						}
+						if(halfinning.currentouts>=CONFIG.outsPerInning)
+						{
+							newbases = newBaseArray();
+						}
+						else
+						{
+							newbases = advanceRunners(1, true, 1, true);
+							newbases[0].player = atbat.batter;
+						}
+					}
+					else
+					{
+						atbat.runnersOut[atbat.runnersOut.length] = atbat.batter;
+						batterOut();
+						if(vals.length>2 && vals[1]=="skip")
+						{
+							atbat.runsScored+=parseInt(vals[2]);
+						}
 					}
 				}
 				else if(vals[0]==="error")
@@ -153,7 +178,8 @@
 				}
 				nextAtBat(newbases);
 			}
-			saveGames(games);
+			
+			saveGame(currentGameIndex, pitchCode.indexOf("_start")===-1);
 			bindGame();
 			isprocessing=false;
 		}
@@ -172,37 +198,20 @@
 
 	}
 	
-	function runnerOut()
-	{
-		"use strict";
-			
-		var halfinning = getCurrentHalfInning();
-		halfinning.currentouts++;
-
-		if(halfinning.currentouts>=CONFIG.outsPerInning)
-		{
-			nextAtBat();
-		}
-	}
+	
 	function nextAtBat(bases)
 	{
 		"use strict";
 		var halfinning = null;
 		
-		if(currentGame.halfinnings.length>0)
+		var gamestart = currentGame.halfinnings.length===0;
+		
+		if(!gamestart)
 			halfinning = getCurrentHalfInning();
 		
 		var inningchange = halfinning!=null && halfinning.currentouts>=CONFIG.outsPerInning;
 		
-		/* broken?
-		if(inningchange)
-		{
-			//need to change the batter index before switching half innings and team pitching/batting.
-			getCurrentTeamBatting().currentbatter = ((getCurrentTeamBatting().currentbatter+1)%getCurrentTeamBatting().players.length);
-		}
-		*/
-		
-		if(currentGame.halfinnings.length===0 || inningchange)
+		if(gamestart|| inningchange)
 		{
 			//next half inning
 			currentGame.halfinnings[currentGame.halfinnings.length] = new HalfInning();
@@ -222,17 +231,14 @@
 			halfinning.number = Math.round(currentGame.halfinnings.length/2);
 			if(getCurrentTeamFielding().currentpitcher===-1 || CONFIG.autoPitcherChange)
 				getCurrentTeamFielding().currentpitcher = ((getCurrentTeamFielding().currentpitcher+1)%getCurrentTeamFielding().players.length);
+			
+			
 		}
 		if(bases==null && halfinning.atbats.length>0)
 			bases = getCurrentAtBat().bases.clone();
 		else if(bases==null || inningchange)
 		{
-			bases = [];
-			for(var i=0;i<4; i++)
-			{
-				bases[i] = new Base();
-				bases[i].number = i+1;
-			}
+			
 			if(inningchange && CONFIG.extraInningRunners>0 && halfinning.number > currentGame.innings)
 			{
 				var extra = new Player();
@@ -271,14 +277,6 @@
 		{
 			getCurrentTeamFielding().currentpitcher = (getCurrentTeamFielding().currentpitcher+1) % getCurrentTeamFielding().players.length;
 		}
-		/*  broken?
-		//next batter
-		if(!inningchange || getCurrentTeamBatting().currentbatter===-1)
-		{
-			//need to change the batter index here if the inning didn't just start, or if it's the first half inning for the team (and it was already handled)
-			getCurrentTeamBatting().currentbatter = ((getCurrentTeamBatting().currentbatter+1)%getCurrentTeamBatting().players.length);
-		}
-		*/
 		
 		halfinning.atbats[halfinning.atbats.length] = new AtBat();
 		
@@ -290,7 +288,10 @@
 		getCurrentAtBat().bases = bases;
 		
 		
-		setupFielders();
+		if(gamestart || inningchange)
+		{
+			setupFielders();
+		}
 		
 		if(getCurrentAtBat().pitches.length===0)//avoid doing twice to same at bat
 		{
@@ -313,51 +314,61 @@
 	}
 	
 	
-	function advanceRunners(count, pushAll, outsInPlay)
+	function advanceRunners(count, pushAll, outsInPlay, fieldersChoice)
 	{
 		"use strict";
 		if(pushAll==null)
 			pushAll=CONFIG.pushRunnersOnHit;
 		if(outsInPlay==null)
 			outsInPlay = 0;
+		if(fieldersChoice==null)
+			fieldersChoice = false;
 			
 		var atbat = getCurrentAtBat();
 		var halfInning = getCurrentHalfInning();
 		var newbases = atbat.bases.clone();
-		
+		var moved=0;
 		for(var i=newbases.length-1; i>=0; i--)
 		{
 			if(newbases[i].player!=null)
 			{
-				var pushthis = pushAll;
-				if(!pushAll)
+				moved++
+				if(fieldersChoice && moved===1)
 				{
-					var filled = true;
-					for(var j=i; j>=0; j--)
-					{
-						if(newbases[j].player==null)
-						{
-							filled=false;
-							break;
-						}
-					}
-					pushthis=filled;
+					newbases[i].player=null;
 				}
-				if(pushthis)
+				else
 				{
-					if(newbases.length-1>i+count)
-					{//advance player
-						newbases[i+count].player = newbases[i].player;
-					}
-					else
-					{// score
-						if(outsInPlay+halfInning.currentouts<CONFIG.outsPerInning)
+					var pushthis = pushAll;
+					if(!pushAll)
+					{
+						var filled = true;
+						for(var j=i; j>=0; j--)
 						{
-							atbat.runsScored++;
-							atbat.runnersScored[atbat.runnersScored.length] = newbases[i].player;
+							if(newbases[j].player==null)
+							{
+								filled=false;
+								break;
+							}
 						}
+						pushthis=filled;
 					}
-					newbases[i].player = null;
+					if(pushthis)
+					{
+						if(newbases.length-1>i+count)
+						{//advance player
+							newbases[i+count].player = newbases[i].player;
+						}
+						else
+						{// score
+							if(outsInPlay+halfInning.currentouts<CONFIG.outsPerInning)
+							{
+								atbat.runsScored++;
+								atbat.runnersScored[atbat.runnersScored.length] = newbases[i].player;
+							}
+						}
+						newbases[i].player = null;
+					}
 				}
 			}
 		}
@@ -402,7 +413,7 @@
 			redos[redos.length] = JSON.stringify(currentGame);
 			currentGame = JSON.parse(undos[undos.length-2],gameReviver); // last is current state, skip one more back
 			games[currentGameIndex] = currentGame;
-			saveGames(games);
+			saveGame(currentGameIndex);
 			undos.remove(undos.length-2, undos.length-1); // need to remove the last two - the savegames above just added one.
 			bindGame();
 		}
@@ -414,7 +425,7 @@
 		{
 			currentGame = JSON.parse(redos[redos.length-1],gameReviver);
 			games[currentGameIndex] = currentGame;
-			saveGames(games);
+			saveGame(currentGameIndex);
 			redos.remove(redos.length-1);
 			bindGame();
 		}

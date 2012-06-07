@@ -207,6 +207,10 @@ margin: .6em 5% .8em;
 {
 	min-height:1em;
 	border:1px solid #755C2C;
+	padding:.5em .5em .2em;
+}
+.baserunner:empty
+{
 	padding:.5em;
 }
 .baserunner li
@@ -214,11 +218,61 @@ margin: .6em 5% .8em;
 margin-left:5px;
 list-style-type:none;
 }
-.baserunner-active 
+.baserunner-active , .player-active input
 {
 background-color:#755C2C;
 }
-.baserunner-hover 
+.baserunner-hover , .player-hover input
 {
 background-color:#FFEECD;
 }
+.handle
+{
+	float:right;
+	cursor:move;
+}
+#newgameform .handle
+{
+	float:left;
+	position:relative;
+	left: -27px;
+	top: 12px;
+}
+
+#newgameform .ui-draggable input
+{
+	float:left;
+}
+
+/* fix so handle doesn't wrap on small screens */
+@media all and (max-width: 449px){
+	#newgameform .ui-draggable
+	{
+		width:113%;
+	}
+
+	#newgameform .ui-draggable input
+	{
+		width:86%;
+	}
+}
+
+.baserunner .ui-draggable-dragging
+{
+	border:1px solid #755C2C;
+	padding:2px;
+}
+.handle .bar
+{
+	border-top: 1px solid #755c2c;
+	background-color:#e0b054;
+	padding:1px 10px 2px;
+	margin-bottom:3px;
+}
+.runner .clear
+{
+	height:4px;
+}
+#basePath,#basePath_n { position:relative;}
+
+#basePath canvas,#basePath_n canvas  { position:absolute; top:0; left:0;}

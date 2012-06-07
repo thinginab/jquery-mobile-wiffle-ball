@@ -14,7 +14,7 @@
 		else
 			$("a[href='#stats']").show();
 			
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}

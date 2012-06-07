@@ -7,6 +7,84 @@
 		{
 			newgameinited=true;
 			
+			$("#newgameform div.player").each(function(){
+				var $this=$(this);
+				$this.append(HANDLE_HTML)
+				.draggable({
+						revert:'invalid',
+						axis: "y",
+						opacity: .7,
+						cursorAt: { left: 0, top:0 },
+						handle: ".handle"
+				})
+				.droppable({
+						tolerance: "pointer",
+						accept: function(draggable){
+							var myRegexp = /.*(team\d).*/g;
+							var teamclass = myRegexp.exec($(this).attr("class"))[1];
+							return draggable.is("."+teamclass);
+						},
+						activeClass: "player-active",
+						hoverClass: "player-hover",
+						drop: function( event, ui ) {  
+							var $target = $(this);
+							var $source = ui.draggable;
+							var val = $target.val();
+							
+							var teamclass = "."+((/.*(team\d).*/g).exec($target.attr("class"))[1]);
+							var $players = $("#newgameform div"+teamclass);
+							
+							var from = $players.index($source)+1;
+							var to = $players.index($target)+1;
+							
+							var moving = $source.find("input").val();
+							
+							var id = $source.find("input").attr("id");
+							var ind = id.indexOf("_");
+							var postfix = "";
+							if(ind>=0)
+								postfix = id.substring(ind);
+							
+							if(from<to)
+							{//move source down - means move others up
+								for(var i=from; i<to; i++)
+								{
+									$("#player"+i+postfix).val($("#player"+(i+1)+postfix).val());
+								}
+							}
+							else
+							{ //  move source up - means move others down
+								for(var i=from; i>to; i--)
+								{
+									$("#player"+i+postfix).val($("#player"+(i-1)+postfix).val());
+								}
+							}
+							$("#player"+to+postfix).val(moving);
+							
+							$source.css("top","0px");
+						}
+							
+				});
+				
+			});
+			
+			$("#swapteams").click(function(e) {
+				
+				//swap team names
+				var team1 = $("#team1").val();
+				$("#team1").val($("#team2").val());
+				$("#team2").val(team1);
+				
+				// swap players
+				for (var i = 1; i <= CONFIG.maxTeamPlayers; i++) {
+					var team1player = $("#player"+i).val();
+					$("#player"+i).val($("#player"+i+"_2").val());
+					$("#player"+i+"_2").val(team1player);
+				}
+				
+				e.preventDefault();
+			});
+			
 			$("#newgameform").submit(function (e) {
 				
 				currentGame = new Game();
@@ -79,7 +157,7 @@
 			return;
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindNewGame,100);
+			doWorkerThread(bindNewGame,100);
 			return;
 		}
 		
@@ -183,7 +261,7 @@
 					.appendTo( ul );
 			};
 		}
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}

@@ -2,8 +2,8 @@
 <widget xmlns		= "http://www.w3.org/ns/widgets"
 	xmlns:gap	= "http://phonegap.com/ns/1.0"
 	id		= "bigleague"
-	version 	= "1.1.3"
-	versionCode = "113">
+	version 	= "2.0.1"
+	versionCode = "201">
 
 	<name>Big League</name>
 
@@ -29,8 +29,9 @@
 	<!-- Android requires specific dimensions; ldpi, mdpi, and hdpi respectively -->
 	<icon src="images/blwb_icon-36.png" width="36" height="36"/>
 	<icon src="images/blwb_icon-48.png" width="48" height="48"/>
+	<!--
 	<icon src="images/blwb_icon-72.png" width="72" height="72"/>
-	
+	-->
 	<!-- iOS requires specific dimensions for different devices; classic iPhone
   screens, Retina displays, and iPad screens -->
   

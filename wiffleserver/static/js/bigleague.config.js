@@ -40,6 +40,10 @@ var CONFIG =
 	var POST_URL = "save";
 	var LOAD_URL = "load";
 	var CLICK_URL = "other/click.mp3";
+	var HANDLE_HTML = "<span class='handle'><div class='bar'/><div class='bar'/><div class='bar'/></span><div class='clear' />";
+	var CANVAS =  (!!document.createElement('canvas').getContext);
+	var WEB_WORKERS = (!!window.Worker);
+	var ISMOBILE = ('ontouchstart' in document.documentElement);
 	
 	
 	var configinited=false;
@@ -103,6 +107,14 @@ var CONFIG =
 			config.startingStrikes = 0;
 		if(config.halfInningSkip==null)
 			config.halfInningSkip = true;
+		
+		
+		if(!ISMOBILE)
+		{
+			config.processDelay = 0;
+			//CONFIG.clearDelay = 0;
+		}
+			
 		return config;
     }
 	function saveConfig()
@@ -118,7 +130,7 @@ var CONFIG =
 			return;
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindConfig,100);
+			doWorkerThread(bindConfig,100);
 			return;
 		}
 		CONFIG = getConfig();
@@ -146,7 +158,7 @@ var CONFIG =
 		setToggleOption("#sacFlys", CONFIG.sacFlys);
 		
 		
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}

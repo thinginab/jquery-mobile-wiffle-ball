@@ -7,7 +7,7 @@
 			return;
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindGameStats,100);
+			doWorkerThread(bindGameStats,100);
 			return;
 		}
 		setBoxScores($("#boxscore"));
@@ -33,7 +33,7 @@
 		
 		$("#gamestatemail").attr("href",emaillink);
 	
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}

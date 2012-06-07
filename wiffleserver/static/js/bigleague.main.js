@@ -15,16 +15,8 @@
 	$(function () {
 		"use strict";
 		
-		if('ontouchstart' in document.documentElement)
-		{
-			CONFIG.isMobile = true;
-			//CONFIG.clickEvent = 'tap';
-		}
-		else
-		{
-			CONFIG.processDelay = 0;
-			//CONFIG.clearDelay = 0;
-		}
+		CONFIG = getConfig();
+		
 		if(CONFIG.defaultTransition!=null)
 			$.mobile.defaultPageTransition=CONFIG.defaultTransition;
 		
@@ -51,7 +43,6 @@
 		}
 		
 	    games = getGames();
-		CONFIG = getConfig();
 	    getSavedGames();
 		
 		if(CONFIG.isMobile)
@@ -71,9 +62,8 @@
 		setGameViewMode();
 		
 	    $("#home").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindHome,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindHome);
 	    })
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
@@ -81,9 +71,8 @@
 		bindHome();
 		
 	    $("#continue,#stats").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindGames,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindGames);
 	    })
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
@@ -92,9 +81,8 @@
 		
 		
 		$("#config").live("pageshow",function(){
-			showPageLoadingMsg();
-			setTimeout(bindConfig,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindConfig);
 		})
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
@@ -102,9 +90,8 @@
 		bindConfig();
 
 		$("#newgame").live("pageshow",function(){
-			showPageLoadingMsg();
-			setTimeout(bindNewGame,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindNewGame);
 		})
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
@@ -124,8 +111,7 @@
 			else
 				currentSeasonIndex = -1;
 			
-			setTimeout(loadCurrentGame,
-				CONFIG.processDelay);
+			doWorkerThread(loadCurrentGame);
 	    }
 
 	    // grab and use the 'subpage navigation value' for current season, if any
@@ -135,30 +121,26 @@
 	    if (matches != null && matches.length > 1) {
 			showPageLoadingMsg();
 			currentSeasonIndex = parseInt(matches[1]);
-			setTimeout(bindSeasonStats,
-				CONFIG.processDelay);
+			doWorkerThread(bindSeasonStats);
 	    }
 		
 	    $("#game").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(loadCurrentGame,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(loadCurrentGame);
 	    })
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
 		});
 	    $("#gamestats").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindGameStats,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindGameStats);
 	    })
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
 		});
 	    $("#seasonstats").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindSeasonStats,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindSeasonStats);
 	    })
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
@@ -173,7 +155,7 @@
 		"use strict";
 		if(!savedgamesloaded)
 		{
-			setTimeout(loadCurrentGame,100);
+			doWorkerThread(loadCurrentGame,100);
 			return;
 		}
 		var prevGame = currentGame;
@@ -182,7 +164,7 @@
 			currentGame = games[currentGameIndex];
 		else
 			currentGame = savedGames[currentSeasonIndex].games[currentGameIndex];
-			
+		
 			
 		redos = [];
 		if(prevGame!==currentGame) // only on game init
@@ -190,10 +172,14 @@
 			undos = [];
 			undos[0] = JSON.stringify(currentGame);
 			setupRules();
+			
+			resetFielders();
 		}
 		bindGame();
 		bindGameStats();
-		setupFielders();
+			
+		
+		
 		setGameViewMode();
 	}
 	
@@ -204,6 +190,15 @@
 			setGameViewMode();
 		else if($("#home:visible").size()>0)
 			setHomeViewMode();
+	}
+	function doWorkerThread(thread,timeout){
+	//console.log(CONFIG.webWorkers);
+		if(timeout==null)
+			timeout = CONFIG.processDelay;
+		if(timeout===0)
+			return thread.call();
+		else
+			return setTimeout(thread,timeout);
 	}
 	function showPageLoadingMsg($page)
 	{
@@ -244,6 +239,13 @@
 		else
 			result = Math.round(num*Math.pow(10,dec))/Math.pow(10,dec);
 		return result;
+	}
+	
+	function newGuid(){  // from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
+		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+			var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+			return v.toString(16);
+		});
 	}
 	
 	// Array Remove - By John Resig (MIT Licensed)

@@ -36,7 +36,7 @@
 		"use strict";
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindSeasonStats,100);
+			doWorkerThread(bindSeasonStats,100);
 			return;
 		}
 		var games = getGames();
@@ -62,7 +62,7 @@
 		
 		$("#seasonstatemail").attr("href",emaillink);
 		
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}

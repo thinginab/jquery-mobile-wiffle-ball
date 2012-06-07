@@ -21188,6 +21188,10 @@ var CONFIG =
 	var POST_URL = "save";
 	var LOAD_URL = "load";
 	var CLICK_URL = "other/click.mp3";
+	var HANDLE_HTML = "<span class='handle'><div class='bar'/><div class='bar'/><div class='bar'/></span><div class='clear' />";
+	var CANVAS =  (!!document.createElement('canvas').getContext);
+	var WEB_WORKERS = (!!window.Worker);
+	var ISMOBILE = ('ontouchstart' in document.documentElement);
 	
 	
 	var configinited=false;
@@ -21251,6 +21255,14 @@ var CONFIG =
 			config.startingStrikes = 0;
 		if(config.halfInningSkip==null)
 			config.halfInningSkip = true;
+		
+		
+		if(!ISMOBILE)
+		{
+			config.processDelay = 0;
+			//CONFIG.clearDelay = 0;
+		}
+			
 		return config;
     }
 	function saveConfig()
@@ -21266,7 +21278,7 @@ var CONFIG =
 			return;
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindConfig,100);
+			doWorkerThread(bindConfig,100);
 			return;
 		}
 		CONFIG = getConfig();
@@ -21294,7 +21306,7 @@ var CONFIG =
 		setToggleOption("#sacFlys", CONFIG.sacFlys);
 		
 		
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}
@@ -22081,13 +22093,15 @@ var CONFIG =
 		this.innings = CONFIG.inningsPerGame;
 		
 		this.halfinnings = [];
-		
+		this.type = "Game";
+		this.guid = newGuid();
 		
 	};
 	function Base(type){
 		"use strict";
 		this.number = 0;
 		this.player = null;
+		this.type = "Base";
 	};
 	function Team(type){
 		"use strict";
@@ -22095,12 +22109,14 @@ var CONFIG =
 		this.players = [];
 		this.currentbatter = -1;
 		this.currentpitcher = -1;
+		this.type = "Team";
 	};
 	
 	function Player(type){
 		"use strict";
 		this.name = "";
 		this.skip = false;
+		this.type = "Player";
 	};
 	function HalfInning(type){
 		"use strict";
@@ -22110,6 +22126,7 @@ var CONFIG =
 		this.top = true;
 		this.currentouts = 0;
 		this.atbats = [];
+		this.type = "HalfInning";
 	};
 	function AtBat(type){
 		"use strict";
@@ -22126,35 +22143,99 @@ var CONFIG =
 		this.currentballs = 0;
 		this.currentfouls = 0;
 		this.bases = null;
+		this.type = "AtBat";
 	};
+	
+	function newBaseArray()
+	{
+		var bases = [];
+		for(var i=0;i<4; i++)
+		{
+			bases[i] = new Base();
+			bases[i].number = i+1;
+		}
+		return bases;
+	}
 	
 	function gameReviver(key, value)
 	{
 		"use strict";
-	
-		// if this is a game object and it is missing a getId function, set it up
-		if(value!=null && value.players!=null && value.currentbatter!=null
-			 && value.currentpitcher!=null && value.name!=null && value.getId==null)
+		
+		// set types where missing
+		
+		if(value!=null && value.type==null && value.halfinnings!=null)
 		{
-			value.getId = function(){
-				
-				var id = this.name;
-				for(var i=0;i<this.players.length; i++)
-					id += this.players[i].name;
-				return id;
-			};
+			value.type = "Game";
 		}
-		// if this is a game object and it is missing a innings property - set it to default
-		if(value!=null && value.players!=null && value.currentbatter!=null
-			 && value.currentpitcher!=null && value.name!=null && value.innings==null)
-			value.innings = CONFIG.inningsPerGame;
+		else if(value!=null && value.type==null && value.pitcher!=null
+			 && value.batter!=null)
+		{
+			value.type = "AtBat";
+		}
+		else if(value!=null && value.type==null && value.name!=null && value.players!=null)
+		{
+			value.type = "Team";
+		}
+		else if(value!=null && value.type==null && value.name!=null)
+		{
+			value.type = "Player";
+		}
+		else if(value!=null && value.type==null && value.number!=null && value.currentouts!=null && value.top!=null)
+		{
+			value.type = "HalfInning";
+		}
+		else if(value!=null && value.type==null && value.number!=null)
+		{
+			value.type = "Base";
+		}
+		
+		//set missing properties and functions to defaults
+		
+		if(value!=null && value.type==="Game")
+		{
+			if(value.innings==null)
+				value.innings = CONFIG.inningsPerGame;
+				
+			if(value.guid==null)
+				value.guid = newGuid();
+		}
+		
+		if(value!=null && value.type==="Team")
+		{
+			if(value.getId==null)
+			{
+				value.getId = function(){
+					
+					var id = this.name;
+					for(var i=0;i<this.players.length; i++)
+						id += this.players[i].name;
+					return id;
+				};
+			}
+		}
+		
+		if(value!=null && value.type==="AtBat")
+		{
+			if(value.runnersOut==null)
+				value.runnersOut = [];
+				
+			if(value.runnersScored==null)
+				value.runnersScored = [];
 			
+			if(value.batterIndex==null)
+				value.batterIndex = 0;
 			
-		// if this is a atbat object and it is missing a runnersOut property - set it to default
-		if(value!=null && value.pitcher!=null && value.pitcherIndex!=null
-			 && value.batter!=null && value.batterIndex!=null && value.runnersOut==null)
-			value.runnersOut = [];
-			
+			if(value.pitcherIndex==null)
+				value.pitcherIndex = 0;
+		}
+		
+		if(value!=null && value.type==="Player")
+		{
+			if(value.addedToField==null)
+				value.addedToField = false;
+			if(value.skip==null)
+				value.skip = false;
+		}
 			
 		return value;
 	} 
@@ -22208,7 +22289,7 @@ var CONFIG =
 					}
 					
 					
-					processultimeout = setTimeout(function(){
+					processultimeout = doWorkerThread(function(){
 						pitchulprocessing = true;
 						processultimeout = null;
 						
@@ -22223,7 +22304,7 @@ var CONFIG =
 							clearTimeout(clrultimeout);
 							clrultimeout = null;
 						}
-						clrultimeout = setTimeout(function(){	
+						clrultimeout = doWorkerThread(function(){	
 							clrultimeout = null;	
 								
 							$this.removeClass("ui-btn-active");
@@ -22231,7 +22312,7 @@ var CONFIG =
 							pitchulprocessing = false;
 						},CONFIG.clearDelay);
 						pitchulprocessing = true;
-					},CONFIG.processDelay);
+					});
 					
 					
 				
@@ -22240,7 +22321,7 @@ var CONFIG =
 			var pitchulprocessing2=false;
 			var processultimeout2=null;
 			var clrultimeout2=null;
-			$("ul:not(.inplay) li a[data-pitch]").live(CONFIG.clickEvent,function () {
+			$("ul:not(.inplay) li a[data-pitch]").bind(CONFIG.clickEvent,function () {
 				
 				if(!pitchulprocessing2) // make sure we don't allow double processing/clicks
 				{
@@ -22264,7 +22345,7 @@ var CONFIG =
 						processPitch($this.attr("data-pitch"), $this.attr("data-fielded-by"));
 					}
 					
-					processultimeout2 = setTimeout(function(){
+					processultimeout2 = doWorkerThread(function(){
 						pitchulprocessing2 = true;
 						processultimeout2 = null;
 						
@@ -22279,7 +22360,7 @@ var CONFIG =
 							clearTimeout(clrultimeout2);
 							clrultimeout2 = null;
 						}
-						clrultimeout2 = setTimeout(function(){	
+						clrultimeout2 = doWorkerThread(function(){	
 							clrultimeout2 = null;	
 								
 							$this.removeClass("ui-btn-active");
@@ -22287,7 +22368,7 @@ var CONFIG =
 							pitchulprocessing2 = false;
 						},CONFIG.clearDelay);
 						pitchulprocessing2 = true;
-					},CONFIG.processDelay);
+					});
 					
 				
 				}
@@ -22312,7 +22393,7 @@ var CONFIG =
 						clrbtntimeout = null;
 					}
 					pitchbtnprocessing = true;
-					processtimeout = setTimeout(function(){ //processPitch "threaded" for ui responsiveness
+					processtimeout = doWorkerThread(function(){ //processPitch "threaded" for ui responsiveness
 						pitchbtnprocessing = true;
 						processtimeout = null;
 					
@@ -22324,7 +22405,7 @@ var CONFIG =
 							clearTimeout(clrbtntimeout);
 							clrbtntimeout = null;
 						}
-						clrbtntimeout = setTimeout(function(){	
+						clrbtntimeout = doWorkerThread(function(){	
 							clrbtntimeout = null;	
 								
 							$this.removeClass("ui-btn-active");
@@ -22333,7 +22414,7 @@ var CONFIG =
 						},CONFIG.clearDelay);
 						pitchbtnprocessing = true;
 						
-					},CONFIG.processDelay);
+					});
 				}
 			});
 			
@@ -22346,7 +22427,7 @@ var CONFIG =
 					$this.addClass(".ui-btn-active");
 					
 				undo();
-				setTimeout(function(){
+				doWorkerThread(function(){
 					var $li = $this.parents("li:first").removeClass("ui-btn-active");
 				},CONFIG.clearDelay);
 			});
@@ -22361,28 +22442,28 @@ var CONFIG =
 					var ab = getCurrentAtBat();
 					var lastab = hi.atbats[hi.atbats.length-2];
 					
-					
 					for(var i=0; i<lastab.runnersScored.length; i++)
 					{
-						$("#runnersscored").append("<li class='runner' data-scored='true' data-scorerindex='"+i+"'>"+lastab.runnersScored[i].name+"</li>");
+						$("#runnersscored").append("<li class='runner' data-scored='true' data-scorerindex='"+i+"'>"+lastab.runnersScored[i].name+HANDLE_HTML+"</li>");
 					}
 					for(var i=0; i<ab.bases.length; i++)
 					{
 						if(ab.bases[i].player!=null)
 						{
-							$("#runner_"+(i+1)).append("<li class='runner' data-base='"+i+"'>"+ab.bases[i].player.name+"</li>");
+							$("#runner_"+(i+1)).append("<li class='runner' data-base='"+i+"'>"+ab.bases[i].player.name+HANDLE_HTML+"</li>");
 						}
 					}
 					for(var i=0; i<lastab.runnersOut.length; i++)
 					{
-						$("#runnersout").append("<li class='runner' data-out='true' data-outindex='"+i+"'>"+lastab.runnersOut[i].name+"</li>");
+						$("#runnersout").append("<li class='runner' data-out='true' data-outindex='"+i+"'>"+lastab.runnersOut[i].name+HANDLE_HTML+"</li>");
 					}
 					
 					$(".baserunner li.runner").draggable({
-						revert:true,
+						revert:'invalid',
 						axis: "y",
 						opacity: .7,
-						cursorAt: { left: 0, top:0 }
+						cursorAt: { left: 0, top:0 },
+						handle: ".handle"
 					});
 					
 					if($(".baserunner").attr("data-inited")!=="true")
@@ -22398,6 +22479,7 @@ var CONFIG =
 							hoverClass: "baserunner-hover",
 							drop: function( event, ui ) {  
 								$(this).prepend(ui.draggable);
+								ui.draggable.css("top","0px");
 							}
 								
 						});
@@ -22407,6 +22489,7 @@ var CONFIG =
 					if($("#saverunners").attr("data-inited")!=="true")
 					{
 						$("#saverunners").bind(CONFIG.clickEvent,function(){
+							  var bases = newBaseArray();
 							  $("ul:not(#runnersOut) li.runner,ul#runnersOut li.runner").each(function(){  // do 'runners out' last to prevent accidental skip to next inning
 								var $r = $(this);
 								var $p = $r.parent();
@@ -22417,11 +22500,7 @@ var CONFIG =
 										if($r.attr("data-base")!=null)
 										{
 											//remove from base
-											if(ab.bases[parseInt($r.attr("data-base"))].player.name==$r.text())
-											{
-												lastab.runnersOut[lastab.runnersOut.length] = ab.bases[parseInt($r.attr("data-base"))].player;
-												ab.bases[parseInt($r.attr("data-base"))].player=null;
-											}
+											lastab.runnersOut[lastab.runnersOut.length] = ab.bases[parseInt($r.attr("data-base"))].player;
 										}
 										if($r.attr("data-scored")==="true")
 										{
@@ -22429,13 +22508,13 @@ var CONFIG =
 											lastab.runsScored--;
 											var index = parseInt($r.attr("data-scorerindex"));
 											lastab.runnersOut[lastab.runnersOut.length] = lastab.runnersScored[index];
-											lastab.runnersScored.remove(index,index+1);
+											lastab.runnersScored.remove(index);
 										}
 										//new out
-										runnerOut();
+										hi.currentouts++;
 									}
 								}
-								else if($p.attr("id")=="runnersscored")
+								else if($p.attr("id")==="runnersscored")
 								{
 									if($r.attr("data-scored")!=="true")
 									{
@@ -22444,7 +22523,6 @@ var CONFIG =
 										if($r.attr("data-base")!=null)
 										{
 											lastab.runnersScored[lastab.runnersScored.length] = ab.bases[parseInt($r.attr("data-base"))].player;
-											ab.bases[parseInt($r.attr("data-base"))].player=null;
 										}
 										if($r.attr("data-out")==="true")
 										{
@@ -22452,42 +22530,60 @@ var CONFIG =
 											hi.currentouts--;
 											var index = parseInt($r.attr("data-outindex"));
 											lastab.runnersScored[lastab.runnersScored.length] = lastab.runnersOut[index];
-											lastab.runnersOut.remove(index,index+1);
+											lastab.runnersOut.remove(index);
 										}
 									}
 								}
 								else
 								{
 									
-										if($r.attr("data-base")!=null && $r.attr("data-base")!=$p.attr("data-base"))
+										if($r.attr("data-base")!=null)
 										{
 											//change base
-											ab.bases[parseInt($p.attr("data-base"))].player=ab.bases[parseInt($r.attr("data-base"))].player;
-											ab.bases[parseInt($r.attr("data-base"))].player=null;
+											bases[parseInt($p.attr("data-base"))].player=ab.bases[parseInt($r.attr("data-base"))].player;
 										}
 										if($r.attr("data-out")==="true")
 										{
 											//remove out
 											hi.currentouts--;
 											var index = parseInt($r.attr("data-outindex"));
-											ab.bases[parseInt($p.attr("data-base"))].player = lastab.runnersOut[index];
-											lastab.runnersOut.remove(index,index+1);
+											bases[parseInt($p.attr("data-base"))].player = lastab.runnersOut[index];
+											lastab.runnersOut.remove(index);
 										}
 										if($r.attr("data-scored")==="true")
 										{
 											//remove score
 											lastab.runsScored--;
 											var index = parseInt($r.attr("data-scorerindex"));
-											ab.bases[parseInt($p.attr("data-base"))].player = lastab.runnersScored[index];
-											lastab.runnersScored.remove(index,index+1);
+											bases[parseInt($p.attr("data-base"))].player = lastab.runnersScored[index];
+											lastab.runnersScored.remove(index);
 										}
 									
 								}
 							  });
+							  ab.bases = bases;
 							  hi.atbats[hi.atbats.length-1] = ab;
 							  hi.atbats[hi.atbats.length-2] = lastab;
-							  currentGame.halfinnings[currentGame.halfinnings.length-1] = hi;
-							  $('.ui-dialog').dialog('close');
+							  
+							if(hi.currentouts>=CONFIG.outsPerInning)
+							{
+								// remove at bat for at the plate
+								getCurrentTeamBatting().currentbatter = (getCurrentTeamBatting().currentbatter-1+getCurrentTeamBatting().players.length) 
+									% getCurrentTeamBatting().players.length; // adding the length to ensure it's positive, then doing the modulus to fit it in range
+								hi.atbats.remove(hi.atbats.length-1);
+								
+							}
+							  
+							currentGame.halfinnings[currentGame.halfinnings.length-1] = hi;
+							  
+							saveGame(currentGame);
+							
+							if(hi.currentouts>=CONFIG.outsPerInning)
+							{
+								nextAtBat();
+							}
+							
+							$('.ui-dialog').dialog('close');
 						});
 						$("#saverunners").attr("data-inited","true");
 					}
@@ -22523,7 +22619,7 @@ var CONFIG =
 					$("#setrunsscoredandskip").attr("data-inited","true");
 				}
 				
-				//setTimeout(function(){
+				//doWorkerThread(function(){
 				//	var $li = $this.parents("li:first").removeClass("ui-btn-active");
 				//},CONFIG.clearDelay);
 			});
@@ -22543,7 +22639,7 @@ var CONFIG =
 				if(!$this.hasClass(".ui-btn-active"))
 					$this.addClass(".ui-btn-active");
 				redo();
-				setTimeout(function(){
+				doWorkerThread(function(){
 					
 					$this.parents("li:first").removeClass("ui-btn-active");
 				},CONFIG.clearDelay);
@@ -22603,14 +22699,14 @@ var CONFIG =
 					atbat.pitcherIndex = newpitcherindex;
 					atbat.pitcher = getCurrentTeamFielding().players[newpitcherindex];
 					
-					saveGames(games);
+					saveGame(currentGameIndex);
 					bindGame();
 					$('.ui-dialog').dialog('close');
 				});
 				
 				
 				
-				setTimeout(function(){
+				doWorkerThread(function(){
 					
 					var $li = $this.removeClass("ui-btn-active");
 				},CONFIG.clearDelay);
@@ -22669,14 +22765,14 @@ var CONFIG =
 					atbat.batter = getCurrentTeamBatting().players[newbatterindex];
 					
 					
-					saveGames(games);
+					saveGame(currentGameIndex);
 					bindGame();
 					$('.ui-dialog').dialog('close');
 				});
 
 				$("#changebatter").find(".ui-header").removeClass("ui-corner-top");
 				
-				setTimeout(function(){
+				doWorkerThread(function(){
 					
 					$this.parents("li:first").removeClass("ui-btn-active");
 				},CONFIG.clearDelay);
@@ -22697,13 +22793,13 @@ var CONFIG =
 					$("#setseason").find(".ui-header").removeClass("ui-corner-top");
 					$("#saveseason").bind(CONFIG.clickEvent,function(){
 						  currentGame.season = $('#seasonName').val();
-						  saveGames(games);
+						  saveGame(currentGameIndex);
 						  $("#server").hide();
 						  $('.ui-dialog').dialog('close');
 					});
 					
 				}
-					setTimeout(function(){
+					doWorkerThread(function(){
 						
 						var $li = $this.parents("li:first").removeClass("ui-btn-active");
 					},CONFIG.clearDelay);
@@ -22714,7 +22810,7 @@ var CONFIG =
 					$this.parent().addClass(".ui-btn-active");
 					
 				output();
-				setTimeout(function(){
+				doWorkerThread(function(){
 					
 					var $li = $this.parents("li:first").removeClass("ui-btn-active");
 				},CONFIG.clearDelay);
@@ -22753,9 +22849,11 @@ var CONFIG =
 		}
 		var $basePath = $("#basePath");
 		
-		if($basePath[0].getContext)
+		if(CANVAS)
 		{
+			$basePath.find("div").hide();
 			drawBases($basePath);
+			$("#basePath_n").find("div").hide();
 			drawBases($("#basePath_n"));
 		}
 		
@@ -22827,13 +22925,23 @@ var CONFIG =
 		}
 	}
 	
-	
+	function showEnabledOptions()
+	{
+		// for some reason the delay matters on iOS - before this it was leaving valid lis hidden.
+		doWorkerThread(
+			function(){
+				$("li:has([data-pitch])").show();
+				$("li:has([data-fielded-by-template]),li[data-teamoff],li[data-disabled],li[data-situationoff]").hide();
+			}
+		);		
+		
+	}
 	function bindGame()
 	{
 		"use strict";
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindGame,100);
+			doWorkerThread(bindGame,100);
 			return;
 		}
 		if(currentGame==null)
@@ -22885,18 +22993,16 @@ var CONFIG =
 		
 		if(atbat.bases==null)
 		{
-			atbat.bases=[];
-			for(var i=0;i<4; i++)
-			{
-				atbat.bases[i] = new Base();
-				atbat.bases[i].number = i+1;
-			}
+			atbat.bases=newBaseArray();
 		}
+		
 		var $basePath = $("#basePath");
 		
-		if($basePath[0].getContext)
+		if(CANVAS)
 		{
+			$basePath.find("div").hide();
 			drawBases($basePath,atbat.bases);
+			$("#basePath_n").find("div").hide();
 			drawBases($("#basePath_n"),atbat.bases);
 		}
 		else
@@ -22927,15 +23033,24 @@ var CONFIG =
 			$("#redoli").show();
 		
 		if((!CONFIG.doublePlayRunnersRequired || atbat.bases[0].player!=null) && halfinning.currentouts<CONFIG.outsPerInning-1)
-			$(".dp:not([data-disabled])").show();
+			$(".dp").removeAttr("data-situationoff");
 		else
-			$(".dp:not([data-disabled])").hide();
+			$(".dp").attr("data-situationoff","");
+		
+		if(atbat.bases[0].player!=null || atbat.bases[1].player!=null || atbat.bases[2].player!=null) //someone on base, can have fc
+			$(".fc").removeAttr("data-situationoff");
+		else
+			$(".fc").attr("data-situationoff","");
 			
 		
-		if((atbat.bases[0].player!=null || atbat.bases[1].player!=null || atbat.bases[2].player!=null) && halfinning.currentouts<2)
-			$(".sac:not([data-disabled])").show();
+		if((atbat.bases[0].player!=null || atbat.bases[1].player!=null || atbat.bases[2].player!=null) && halfinning.currentouts<2) //someone on base, less than 2 outs,  can have sac
+			$(".sac").removeAttr("data-situationoff");
 		else
-			$(".sac:not([data-disabled])").hide();
+			$(".sac").attr("data-situationoff","");
+		
+		
+		showEnabledOptions();
+		
 		
 		if((currentGame.season && currentGame.season.length>0) || !window.navigator.onLine || !CONFIG.connectToServer)
 			$("#server").hide();	
@@ -22959,9 +23074,89 @@ var CONFIG =
 			$("#gameover").hide();
 		}
 		*/
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
+	}
+	
+	
+	function getRunners($bases,basePathCw,basePathCh) {
+		$bases.find("canvas").remove();
+		
+		var minSide = Math.min(basePathCw, basePathCh);
+		
+		if(minSide===basePathCw)
+			$bases.css("min-width",basePathCw);
+		else
+			$bases.css("min-width","");
+			
+		if(minSide===basePathCh)
+			$bases.css("min-height",basePathCh);
+		else
+			$bases.css("min-height","");
+			
+		var diamondsize = minSide*(.7);
+		var basesize = diamondsize/4.0;
+		var pathLength = diamondsize-basesize;
+		
+		function getRotatedCanvas() {
+			
+			var canvas = document.createElement("canvas");
+			var context = canvas.getContext("2d");
+			
+			canvas.width = basePathCw;
+			canvas.height = basePathCh;
+			
+			context.lineWidth = 1;
+			context.strokeStyle = "#947333";
+			context.fillStyle = "#D6522C";//"#5E87B0";
+			var translateX = (basePathCw-diamondsize)/2.0;
+			var translateY = (basePathCh-diamondsize)/2.0;
+			var tranCenterX = basePathCw/2.0;
+			var tranCenterY = basePathCh/2.0;
+
+			
+			// need to do rotation  with upperleft at center of canvas and then go back
+			// http://stackoverflow.com/questions/9402631/opengl-translate-down-on-y-and-rotate-on-z-around-element-center-on-android
+			
+			context.translate(tranCenterX ,tranCenterY);
+			context.rotate(45.0*Math.PI/180.0);
+			context.translate(-tranCenterX ,-tranCenterY);
+			
+			context.translate(translateX,translateY);
+			
+			return canvas;
+		}
+		function getRunner(x, y) {
+			
+			var canvas = getRotatedCanvas();
+			var context = canvas.getContext("2d");
+			context.fillRect(x,y,basesize,basesize);
+
+			return canvas;        
+		}
+		function getPaths() {
+			
+			var canvas = getRotatedCanvas();
+			var context = canvas.getContext("2d");
+			context.strokeStyle = "#947333";
+			context.fillStyle = "#D6522C";//"#5E87B0";
+			context.strokeRect(0,0,diamondsize,diamondsize);
+			context.strokeRect(pathLength, 0, basesize, basesize);
+			context.strokeRect(0, 0, basesize, basesize);
+			context.strokeRect(0, pathLength, basesize, basesize);
+			context.strokeRect(pathLength, pathLength, basesize, basesize);
+			
+			return canvas;
+		}
+		$bases.append(getPaths())
+		var canvases = [
+			getRunner(pathLength, 0), getRunner(0, 0),
+			getRunner(0, pathLength)
+		];
+		
+		$bases.append(canvases);
+		return canvases;
 	}
 	
 	var draw_current_bases=null;
@@ -22973,63 +23168,30 @@ var CONFIG =
 		else
 			draw_current_bases = bases;
 		
+		var redraw = $canvas.is(":visible") && ($canvas.attr("data-width")!=$canvas.width() || $canvas.attr("data-height")!=$canvas.height());
+		
+		
 		if(bases==null)
 			return;
-			
-		$canvas.attr("width",1)
-			.attr("height",1);
-			
-		var basePathCw = $canvas.parent().width();
-		var basePathCh  = $canvas.parent().parent().height()-4;
-		var minSide = Math.min(basePathCw, basePathCh);
-		if(minSide>0)
+		if(redraw)
 		{
-			var diamondsize = minSide*(.7);
-			var basesize = diamondsize/4.0;
+			$canvas.css("min-width","").css("min-height","");
+			var basePathCw = $canvas.parent().width();
+			var basePathCh  = $canvas.parent().parent().height();
 			
-			$canvas.attr("width",basePathCw)
-				.attr("height",basePathCh);
-			var basePathC = $canvas[0].getContext('2d');
-			
-			basePathC.strokeStyle = "#947333";
-			basePathC.fillStyle = "#D6522C";//"#5E87B0";
-			var translateX = (basePathCw-diamondsize)/2.0;
-			var translateY = (basePathCh-diamondsize)/2.0;
-			
-			var tranCenterX = basePathCw/2.0;
-			var tranCenterY = basePathCh/2.0;
-			
-			// draw a set of rotated squares, shifted to center of canvas
-			
-			// need to do rotation  with upperleft at center of canvas and then go back
-			// http://stackoverflow.com/questions/9402631/opengl-translate-down-on-y-and-rotate-on-z-around-element-center-on-android
-			basePathC.translate(tranCenterX ,tranCenterY);
-			basePathC.rotate(45.0*Math.PI/180.0);
-			basePathC.translate(-tranCenterX ,-tranCenterY);
-			
-			// move it to to center point
-			basePathC.translate(translateX,translateY);
-			
-			//diamond
-			basePathC.strokeRect(0,0,diamondsize,diamondsize);
-			
-			//first base	
-			basePathC.strokeRect(diamondsize-basesize,0,basesize,basesize);
-			if(bases[0].player!=null)
-				basePathC.fillRect(diamondsize-basesize,0,basesize,basesize);
+			if(basePathCh>$canvas.parent().prev().height()) //fix for spacer in narrow area
+				basePathCh-=$canvas.parent().prev().height();
 				
-			//second base
-			basePathC.strokeRect(0,0,basesize,basesize);
-			if(bases[1].player!=null)
-				basePathC.fillRect(0,0,basesize,basesize);
+			getRunners($canvas, basePathCw, basePathCh);
 			
-			// third base	
-			basePathC.strokeRect(0,diamondsize-basesize,basesize,basesize);
-			if(bases[2].player!=null)
-				basePathC.fillRect(0,diamondsize-basesize,basesize,basesize);
-				
-			//home
-			basePathC.strokeRect(diamondsize-basesize,diamondsize-basesize,basesize,basesize);
+			$canvas.attr("data-width",$canvas.width()).attr("data-height",$canvas.height());
+		}
+		for(var i=0;i<bases.length;i++)
+		{
+			if(bases[i]!=null && bases[i].player!=null)
+				$canvas.find("canvas:eq("+(i+1)+")").show();
+			else
+				$canvas.find("canvas:eq("+(i+1)+")").hide();
 		}
 	}
 	
@@ -23039,76 +23201,79 @@ var CONFIG =
 		"use strict";
 		if(!CONFIG.doublePlayOnFly)
 		{
-			$(".fly .dp").hide().attr("data-disabled","");
+			$(".fly .dp").attr("data-disabled","");
 		}
 		else
 		{
-			$(".fly .dp").show().removeAttr("data-disabled");
+			$(".fly .dp").removeAttr("data-disabled");
 		}
 		if(!CONFIG.doublePlayOnLine)
 		{
-			$(".linedrive .dp").hide().attr("data-disabled","");
+			$(".linedrive .dp").attr("data-disabled","");
 		}
 		else
 		{
-			$(".linedrive .dp").show().removeAttr("data-disabled");
+			$(".linedrive .dp").removeAttr("data-disabled");
 		}
 		if(!CONFIG.ceilingOuts)
 		{
-			$(".ceiling").hide().attr("data-disabled","");
+			$(".ceiling").attr("data-disabled","");
 		}
 		else
 		{
-			$(".ceiling").show().removeAttr("data-disabled");
+			$(".ceiling").removeAttr("data-disabled");
 		}
 		if(!CONFIG.flySingles)
 		{
-			$(".fly .single").hide().attr("data-disabled","");
+			$(".fly .single").attr("data-disabled","");
 		}
 		else
 		{
-			$(".fly .single").show().removeAttr("data-disabled","");
+			$(".fly .single").removeAttr("data-disabled","");
 		}
 		if(!CONFIG.lineSingles)
 		{
-			$(".linedrive .single").hide().attr("data-disabled","");
+			$(".linedrive .single").attr("data-disabled","");
 		}
 		else
 		{
-			$(".linedrive .single").show().removeAttr("data-disabled");
+			$(".linedrive .single").removeAttr("data-disabled");
 		}
 		if(CONFIG.doublePlayAdvanceOnFailed<=0)
 		{
-			$(".faileddp").hide().attr("data-disabled","");
+			$(".faileddp").attr("data-disabled","");
 		}
 		else
 		{
-			$(".faileddp").show().removeAttr("data-disabled");
+			$(".faileddp").removeAttr("data-disabled");
 		}
 		if(!CONFIG.overSpeedWalk)
 		{
-			$(".overspeed").hide().attr("data-disabled","");
+			$(".overspeed").attr("data-disabled","");
 		}
 		else
 		{
-			$(".overspeed").show().removeAttr("data-disabled");
+			$(".overspeed").removeAttr("data-disabled");
 		}
 		if(!CONFIG.halfInningSkip)
 		{
-			$(".halfInningSkip").hide().attr("data-disabled","");
+			$(".halfInningSkip").attr("data-disabled","");
 		}
 		else
 		{
-			$(".halfInningSkip").show().removeAttr("data-disabled");
+			$(".halfInningSkip").removeAttr("data-disabled");
 		}
 		if(!CONFIG.sacFlys)
 		{
-			$(".sac").hide().attr("data-disabled","");
+			$(".sac").attr("data-disabled","");
 		}
 		else
 		{
-			$(".sac").show().removeAttr("data-disabled");
+			$(".sac").removeAttr("data-disabled");
 		}
+		
+		
+		showEnabledOptions();
 		
 		try
 		{ // might not be previously init'd
@@ -23117,8 +23282,23 @@ var CONFIG =
 		catch(exc){
 		}
 	}
+	function resetFielders()
+	{
+		$("li:has(a[data-fielded-by])").remove();
+		
+		var batting = getCurrentTeamBatting();
+		for(var i=0; i<batting.players.length; i++)
+			batting.players[i].addedToField=false;
+		setupFielders(batting);
+		
+		var fielding = getCurrentTeamFielding();
+		for(var i=0; i<fielding.players.length; i++)
+			fielding.players[i].addedToField=false;
+		setupFielders(fielding);
+	}
+	
 	var setupFieldersRunning=false;
-	function setupFielders()
+	function setupFielders(forteam)
 	{
 		"use strict";
 		
@@ -23131,45 +23311,46 @@ var CONFIG =
 			$("#game ul.inplay").listview("refresh");
 		}
 		catch(exc){
-			setTimeout(setupFielders,100);
+			doWorkerThread(setupFielders,100);
 			return;
 		}
 		if(!setupFieldersRunning)
 		{
 			setupFieldersRunning=true;
-			var fielded = $("li:has(a[data-fielded-by])");
-			fielded.find("a[data-fielded-by]").attr("data-fielded-by","");
-			fielded.find("span.fieldedby").remove();
-			for(var i=fielded.length; i>=0; i--) // clear previous fielders
-			{
-				var pitch = fielded.eq(i).find("a[data-fielded-by]").attr("data-pitch");
-				
-				if(pitch)
-				{
-					var els = fielded.filter(":has([data-pitch="+pitch+"])").slice(1);
-					i-=els.length;
-					els.remove();
-					fielded = $("li:has(a[data-fielded-by])");
-				}
-			}
-			//return;
-			var teamfielding = getCurrentTeamFielding();
-			for(var i=0; i<fielded.length; i++) // dupe fielding items for each fielder
-			{
-				var item = fielded.eq(i);
-				for(var j=1; j<teamfielding.players.length; j++)
-				{
-					var newi = item.clone();
-					newi.find("a[data-fielded-by]").attr("data-fielded-by",teamfielding.players[j].name)
-						.append("<span class='fieldedby'> By "+teamfielding.players[j].name+"</span>");
-					
-					item.after(newi);
-				}
-					item.find("a[data-fielded-by]").attr("data-fielded-by",teamfielding.players[0].name)
-						.append("<span class='fieldedby'> By "+teamfielding.players[0].name+"</span>");
-			}
+			var fielded = $("li:has(a[data-fielded-by-template])");
+			fielded.show();
 			
-			$("#game ul.inplay").listview("refresh");
+			var changemade=false;
+			
+			if(forteam==null)
+				forteam = getCurrentTeamFielding();
+			for(var j=forteam.players.length-1; j>=0; j--)
+			{
+				if(forteam.players[j].addedToField!==true)
+				{
+					for(var i=0; i<fielded.length; i++) // dupe fielding items for each fielder
+					{
+						var item = fielded.eq(i);
+						
+						var newi = item.clone();
+						newi.find("a[data-fielded-by-template]").attr("data-fielded-by",forteam.players[j].name)
+							.attr("data-fielded-by-team",forteam.name)
+							.append("<span class='fieldedby'> By "+forteam.players[j].name+"</span>").removeAttr("data-fielded-by-template");
+						
+						item.after(newi);
+					}
+					changemade=true;
+					forteam.players[j].addedToField = true;
+				}
+			}
+			$("li:has(a[data-fielded-by-team='"+getCurrentTeamFielding().name+"'])").removeAttr("data-teamoff");
+			$("li:has(a[data-fielded-by-team='"+getCurrentTeamBatting().name+"'])").attr("data-teamoff","");
+			
+			showEnabledOptions();
+		
+			fielded.hide();
+			if(changemade)
+				$("#game ul.inplay").listview("refresh");
 			setupFieldersRunning=false;
 		}
 	}
@@ -23215,6 +23396,84 @@ var CONFIG =
 		if(!newgameinited)
 		{
 			newgameinited=true;
+			
+			$("#newgameform div.player").each(function(){
+				var $this=$(this);
+				$this.append(HANDLE_HTML)
+				.draggable({
+						revert:'invalid',
+						axis: "y",
+						opacity: .7,
+						cursorAt: { left: 0, top:0 },
+						handle: ".handle"
+				})
+				.droppable({
+						tolerance: "pointer",
+						accept: function(draggable){
+							var myRegexp = /.*(team\d).*/g;
+							var teamclass = myRegexp.exec($(this).attr("class"))[1];
+							return draggable.is("."+teamclass);
+						},
+						activeClass: "player-active",
+						hoverClass: "player-hover",
+						drop: function( event, ui ) {  
+							var $target = $(this);
+							var $source = ui.draggable;
+							var val = $target.val();
+							
+							var teamclass = "."+((/.*(team\d).*/g).exec($target.attr("class"))[1]);
+							var $players = $("#newgameform div"+teamclass);
+							
+							var from = $players.index($source)+1;
+							var to = $players.index($target)+1;
+							
+							var moving = $source.find("input").val();
+							
+							var id = $source.find("input").attr("id");
+							var ind = id.indexOf("_");
+							var postfix = "";
+							if(ind>=0)
+								postfix = id.substring(ind);
+							
+							if(from<to)
+							{//move source down - means move others up
+								for(var i=from; i<to; i++)
+								{
+									$("#player"+i+postfix).val($("#player"+(i+1)+postfix).val());
+								}
+							}
+							else
+							{ //  move source up - means move others down
+								for(var i=from; i>to; i--)
+								{
+									$("#player"+i+postfix).val($("#player"+(i-1)+postfix).val());
+								}
+							}
+							$("#player"+to+postfix).val(moving);
+							
+							$source.css("top","0px");
+						}
+							
+				});
+				
+			});
+			
+			$("#swapteams").click(function(e) {
+				
+				//swap team names
+				var team1 = $("#team1").val();
+				$("#team1").val($("#team2").val());
+				$("#team2").val(team1);
+				
+				// swap players
+				for (var i = 1; i <= CONFIG.maxTeamPlayers; i++) {
+					var team1player = $("#player"+i).val();
+					$("#player"+i).val($("#player"+i+"_2").val());
+					$("#player"+i+"_2").val(team1player);
+				}
+				
+				e.preventDefault();
+			});
 			
 			$("#newgameform").submit(function (e) {
 				
@@ -23288,7 +23547,7 @@ var CONFIG =
 			return;
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindNewGame,100);
+			doWorkerThread(bindNewGame,100);
 			return;
 		}
 		
@@ -23392,7 +23651,7 @@ var CONFIG =
 					.appendTo( ul );
 			};
 		}
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}
@@ -23414,7 +23673,7 @@ var CONFIG =
 		else
 			$("a[href='#stats']").show();
 			
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}
@@ -23451,7 +23710,7 @@ var CONFIG =
 			return;
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindGames,100);
+			doWorkerThread(bindGames,100);
 			
 			return;
 		}
@@ -23542,6 +23801,7 @@ var CONFIG =
 					redos = [];
 					undos[0] = JSON.stringify(currentGame);
 					
+					resetFielders();
 					
 					if($(this).is("[data-recreate=true]"))
 					{
@@ -23566,7 +23826,7 @@ var CONFIG =
 						redos = [];
 						undos[0] = JSON.stringify(currentGame);
 						recreateGame();
-						saveGames(games);
+						saveGame(currentGameIndex);
 
 						$.mobile.changePage($(this).find("a").attr("href"),
 							{
@@ -23642,7 +23902,7 @@ var CONFIG =
 		}
 		$("ul li.ui-btn-active").removeClass("ui-btn-active");
 			isloading=false;
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 		
@@ -23659,17 +23919,57 @@ var CONFIG =
 		}
 	}
 	
-	
+	function updateGameStorage()
+	{
+		"use strict";
+		if(localStorage["games"]!=null && localStorage["games"]!="null")   // update to new individual game storage method
+		{
+			var allgames = JSON.parse(localStorage["games"],gameReviver);
+			var gameids = [];
+			for(var i=0; i<allgames.length; i++)
+			{
+				localStorage["game_"+allgames[i].guid] = JSON.stringify(allgames[i]);
+				gameids[gameids.length] = allgames[i].guid;
+			}
+			localStorage["gameids"] = JSON.stringify(gameids);
+			localStorage["games"] = null;
+		}
+	}
+	function getGame(index)
+	{
+		"use strict";
+		updateGameStorage();
+		
+		var gameids = getGameIds();
+		
+		return JSON.parse(localStorage["game_"+gameids[index]], gameReviver);
+	}
+	function getGameIds()
+	{
+		if(localStorage["gameids"]==null)
+			return [];
+		
+		return JSON.parse(localStorage["gameids"]);
+	}
 	function getGames()
 	{
 		"use strict";
-		if(localStorage["games"]==null)
-			return [];
-		return JSON.parse(localStorage["games"],gameReviver);
+		
+		updateGameStorage();
+		
+		var gameids = getGameIds();
+		
+		var games = [];
+		
+		for(var i=0; i<gameids.length; i++)
+			games[games.length] = getGame(i);
+			
+		return games;
     }
 	var savedgamesloaded=true;
     function getSavedGames() {
 		"use strict";
+		
 		if(CONFIG.connectToServer && window.navigator.onLine)
 		{
 			savedgamesloaded=false;
@@ -23678,7 +23978,7 @@ var CONFIG =
 				savedGames = JSON.parse(JSON.stringify(data),gameReviver);
 				//console.log(savedGames);
 				savedgamesloaded=true;
-				setTimeout(function(){	
+				doWorkerThread(function(){	
 					hidePageLoadingMsg();
 				},CONFIG.clearDelay);
 			})
@@ -23687,20 +23987,46 @@ var CONFIG =
 				//console.log("incoming Text " + jqXHR.responseText);
 				savedGames = [];
 				savedgamesloaded=true;
-				setTimeout(function(){	
+				doWorkerThread(function(){	
 					hidePageLoadingMsg();
 				},CONFIG.clearDelay);
 			})
 			;
 		}
     }
+	function saveGame(index, saveundo)
+	{
+		"use strict";
+		
+		if(saveundo==null)
+			saveundo = true;
+		
+		if(savedgamesloaded)
+			post();
+			
+		var curGame = JSON.stringify(currentGame);
+		
+		if(saveundo)
+			undos[undos.length] = curGame;		
+		
+		var gameids = getGameIds();
+		
+		if(gameids.length>index)
+			localStorage["game_"+gameids[index]]=curGame;
+	}
 	function saveGames(games)
 	{
 		"use strict";
-		if(savedgamesloaded)
-			post();
-		undos[undos.length] = JSON.stringify(currentGame);
-		localStorage["games"] = JSON.stringify(games);
+		
+		saveGame(currentGameIndex);
+		
+		var gameids = [];
+		for(var i=0; i<games.length; i++)
+		{
+			gameids[gameids.length] = games[i].guid;
+			localStorage["game_"+games[i].guid] = JSON.stringify(games[i]);
+		}
+		localStorage["gameids"] = JSON.stringify(gameids);
 	} 
 /*************** bigleague.scoregamelogic.js ***********/
 
@@ -23800,11 +24126,36 @@ var CONFIG =
 				}
 				else if(vals[0]==="out")
 				{
-					atbat.runnersOut[atbat.runnersOut.length] = atbat.batter;
-					batterOut();
-					if(vals.length>2 && vals[1]=="skip")
+					if(vals[vals.length-1]==="fc")
 					{
-						atbat.runsScored+=parseInt(vals[2]);
+						var halfinning = getCurrentHalfInning();
+						halfinning.currentouts++;
+						for(var i=atbat.bases.length-1; i>=0; i--)
+						{
+							if(atbat.bases[i].player!=null)
+							{
+								atbat.runnersOut[atbat.runnersOut.length] = atbat.bases[i].player;
+								break;
+							}
+						}
+						if(halfinning.currentouts>=CONFIG.outsPerInning)
+						{
+							newbases = newBaseArray();
+						}
+						else
+						{
+							newbases = advanceRunners(1, true, 1, true);
+							newbases[0].player = atbat.batter;
+						}
+					}
+					else
+					{
+						atbat.runnersOut[atbat.runnersOut.length] = atbat.batter;
+						batterOut();
+						if(vals.length>2 && vals[1]=="skip")
+						{
+							atbat.runsScored+=parseInt(vals[2]);
+						}
 					}
 				}
 				else if(vals[0]==="error")
@@ -23857,7 +24208,8 @@ var CONFIG =
 				}
 				nextAtBat(newbases);
 			}
-			saveGames(games);
+			
+			saveGame(currentGameIndex, pitchCode.indexOf("_start")===-1);
 			bindGame();
 			isprocessing=false;
 		}
@@ -23876,37 +24228,20 @@ var CONFIG =
 
 	}
 	
-	function runnerOut()
-	{
-		"use strict";
-			
-		var halfinning = getCurrentHalfInning();
-		halfinning.currentouts++;
-
-		if(halfinning.currentouts>=CONFIG.outsPerInning)
-		{
-			nextAtBat();
-		}
-	}
+	
 	function nextAtBat(bases)
 	{
 		"use strict";
 		var halfinning = null;
 		
-		if(currentGame.halfinnings.length>0)
+		var gamestart = currentGame.halfinnings.length===0;
+		
+		if(!gamestart)
 			halfinning = getCurrentHalfInning();
 		
 		var inningchange = halfinning!=null && halfinning.currentouts>=CONFIG.outsPerInning;
 		
-		/* broken?
-		if(inningchange)
-		{
-			//need to change the batter index before switching half innings and team pitching/batting.
-			getCurrentTeamBatting().currentbatter = ((getCurrentTeamBatting().currentbatter+1)%getCurrentTeamBatting().players.length);
-		}
-		*/
-		
-		if(currentGame.halfinnings.length===0 || inningchange)
+		if(gamestart|| inningchange)
 		{
 			//next half inning
 			currentGame.halfinnings[currentGame.halfinnings.length] = new HalfInning();
@@ -23926,17 +24261,14 @@ var CONFIG =
 			halfinning.number = Math.round(currentGame.halfinnings.length/2);
 			if(getCurrentTeamFielding().currentpitcher===-1 || CONFIG.autoPitcherChange)
 				getCurrentTeamFielding().currentpitcher = ((getCurrentTeamFielding().currentpitcher+1)%getCurrentTeamFielding().players.length);
+			
+			
 		}
 		if(bases==null && halfinning.atbats.length>0)
 			bases = getCurrentAtBat().bases.clone();
 		else if(bases==null || inningchange)
 		{
-			bases = [];
-			for(var i=0;i<4; i++)
-			{
-				bases[i] = new Base();
-				bases[i].number = i+1;
-			}
+			
 			if(inningchange && CONFIG.extraInningRunners>0 && halfinning.number > currentGame.innings)
 			{
 				var extra = new Player();
@@ -23975,14 +24307,6 @@ var CONFIG =
 		{
 			getCurrentTeamFielding().currentpitcher = (getCurrentTeamFielding().currentpitcher+1) % getCurrentTeamFielding().players.length;
 		}
-		/*  broken?
-		//next batter
-		if(!inningchange || getCurrentTeamBatting().currentbatter===-1)
-		{
-			//need to change the batter index here if the inning didn't just start, or if it's the first half inning for the team (and it was already handled)
-			getCurrentTeamBatting().currentbatter = ((getCurrentTeamBatting().currentbatter+1)%getCurrentTeamBatting().players.length);
-		}
-		*/
 		
 		halfinning.atbats[halfinning.atbats.length] = new AtBat();
 		
@@ -23994,7 +24318,10 @@ var CONFIG =
 		getCurrentAtBat().bases = bases;
 		
 		
-		setupFielders();
+		if(gamestart || inningchange)
+		{
+			setupFielders();
+		}
 		
 		if(getCurrentAtBat().pitches.length===0)//avoid doing twice to same at bat
 		{
@@ -24017,51 +24344,61 @@ var CONFIG =
 	}
 	
 	
-	function advanceRunners(count, pushAll, outsInPlay)
+	function advanceRunners(count, pushAll, outsInPlay, fieldersChoice)
 	{
 		"use strict";
 		if(pushAll==null)
 			pushAll=CONFIG.pushRunnersOnHit;
 		if(outsInPlay==null)
 			outsInPlay = 0;
+		if(fieldersChoice==null)
+			fieldersChoice = false;
 			
 		var atbat = getCurrentAtBat();
 		var halfInning = getCurrentHalfInning();
 		var newbases = atbat.bases.clone();
-		
+		var moved=0;
 		for(var i=newbases.length-1; i>=0; i--)
 		{
 			if(newbases[i].player!=null)
 			{
-				var pushthis = pushAll;
-				if(!pushAll)
+				moved++
+				if(fieldersChoice && moved===1)
 				{
-					var filled = true;
-					for(var j=i; j>=0; j--)
-					{
-						if(newbases[j].player==null)
-						{
-							filled=false;
-							break;
-						}
-					}
-					pushthis=filled;
+					newbases[i].player=null;
 				}
-				if(pushthis)
+				else
 				{
-					if(newbases.length-1>i+count)
-					{//advance player
-						newbases[i+count].player = newbases[i].player;
-					}
-					else
-					{// score
-						if(outsInPlay+halfInning.currentouts<CONFIG.outsPerInning)
+					var pushthis = pushAll;
+					if(!pushAll)
+					{
+						var filled = true;
+						for(var j=i; j>=0; j--)
 						{
-							atbat.runsScored++;
-							atbat.runnersScored[atbat.runnersScored.length] = newbases[i].player;
+							if(newbases[j].player==null)
+							{
+								filled=false;
+								break;
+							}
 						}
+						pushthis=filled;
 					}
-					newbases[i].player = null;
+					if(pushthis)
+					{
+						if(newbases.length-1>i+count)
+						{//advance player
+							newbases[i+count].player = newbases[i].player;
+						}
+						else
+						{// score
+							if(outsInPlay+halfInning.currentouts<CONFIG.outsPerInning)
+							{
+								atbat.runsScored++;
+								atbat.runnersScored[atbat.runnersScored.length] = newbases[i].player;
+							}
+						}
+						newbases[i].player = null;
+					}
 				}
 			}
 		}
@@ -24106,7 +24443,7 @@ var CONFIG =
 			redos[redos.length] = JSON.stringify(currentGame);
 			currentGame = JSON.parse(undos[undos.length-2],gameReviver); // last is current state, skip one more back
 			games[currentGameIndex] = currentGame;
-			saveGames(games);
+			saveGame(currentGameIndex);
 			undos.remove(undos.length-2, undos.length-1); // need to remove the last two - the savegames above just added one.
 			bindGame();
 		}
@@ -24118,7 +24455,7 @@ var CONFIG =
 		{
 			currentGame = JSON.parse(redos[redos.length-1],gameReviver);
 			games[currentGameIndex] = currentGame;
-			saveGames(games);
+			saveGame(currentGameIndex);
 			redos.remove(redos.length-1);
 			bindGame();
 		}
@@ -24132,7 +24469,7 @@ var CONFIG =
 			return;
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindGameStats,100);
+			doWorkerThread(bindGameStats,100);
 			return;
 		}
 		setBoxScores($("#boxscore"));
@@ -24158,7 +24495,7 @@ var CONFIG =
 		
 		$("#gamestatemail").attr("href",emaillink);
 	
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	} 
@@ -24200,7 +24537,7 @@ var CONFIG =
 		"use strict";
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindSeasonStats,100);
+			doWorkerThread(bindSeasonStats,100);
 			return;
 		}
 		var games = getGames();
@@ -24226,7 +24563,7 @@ var CONFIG =
 		
 		$("#seasonstatemail").attr("href",emaillink);
 		
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 	}
@@ -24249,16 +24586,8 @@ var CONFIG =
 	$(function () {
 		"use strict";
 		
-		if('ontouchstart' in document.documentElement)
-		{
-			CONFIG.isMobile = true;
-			//CONFIG.clickEvent = 'tap';
-		}
-		else
-		{
-			CONFIG.processDelay = 0;
-			//CONFIG.clearDelay = 0;
-		}
+		CONFIG = getConfig();
+		
 		if(CONFIG.defaultTransition!=null)
 			$.mobile.defaultPageTransition=CONFIG.defaultTransition;
 		
@@ -24285,7 +24614,6 @@ var CONFIG =
 		}
 		
 	    games = getGames();
-		CONFIG = getConfig();
 	    getSavedGames();
 		
 		if(CONFIG.isMobile)
@@ -24305,9 +24633,8 @@ var CONFIG =
 		setGameViewMode();
 		
 	    $("#home").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindHome,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindHome);
 	    })
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
@@ -24315,9 +24642,8 @@ var CONFIG =
 		bindHome();
 		
 	    $("#continue,#stats").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindGames,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindGames);
 	    })
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
@@ -24326,9 +24652,8 @@ var CONFIG =
 		
 		
 		$("#config").live("pageshow",function(){
-			showPageLoadingMsg();
-			setTimeout(bindConfig,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindConfig);
 		})
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
@@ -24336,9 +24661,8 @@ var CONFIG =
 		bindConfig();
 
 		$("#newgame").live("pageshow",function(){
-			showPageLoadingMsg();
-			setTimeout(bindNewGame,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindNewGame);
 		})
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
@@ -24358,8 +24682,7 @@ var CONFIG =
 			else
 				currentSeasonIndex = -1;
 			
-			setTimeout(loadCurrentGame,
-				CONFIG.processDelay);
+			doWorkerThread(loadCurrentGame);
 	    }
 
 	    // grab and use the 'subpage navigation value' for current season, if any
@@ -24369,30 +24692,26 @@ var CONFIG =
 	    if (matches != null && matches.length > 1) {
 			showPageLoadingMsg();
 			currentSeasonIndex = parseInt(matches[1]);
-			setTimeout(bindSeasonStats,
-				CONFIG.processDelay);
+			doWorkerThread(bindSeasonStats);
 	    }
 		
 	    $("#game").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(loadCurrentGame,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(loadCurrentGame);
 	    })
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
 		});
 	    $("#gamestats").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindGameStats,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindGameStats);
 	    })
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
 		});
 	    $("#seasonstats").live("pageshow", function () {
-			showPageLoadingMsg();
-			setTimeout(bindSeasonStats,
-				CONFIG.processDelay);
+			//showPageLoadingMsg();
+			doWorkerThread(bindSeasonStats);
 	    })
 		.live("pagebeforeshow",function(){
 			showPageLoadingMsg($(this));
@@ -24407,7 +24726,7 @@ var CONFIG =
 		"use strict";
 		if(!savedgamesloaded)
 		{
-			setTimeout(loadCurrentGame,100);
+			doWorkerThread(loadCurrentGame,100);
 			return;
 		}
 		var prevGame = currentGame;
@@ -24416,7 +24735,7 @@ var CONFIG =
 			currentGame = games[currentGameIndex];
 		else
 			currentGame = savedGames[currentSeasonIndex].games[currentGameIndex];
-			
+		
 			
 		redos = [];
 		if(prevGame!==currentGame) // only on game init
@@ -24424,10 +24743,14 @@ var CONFIG =
 			undos = [];
 			undos[0] = JSON.stringify(currentGame);
 			setupRules();
+			
+			resetFielders();
 		}
 		bindGame();
 		bindGameStats();
-		setupFielders();
+			
+		
+		
 		setGameViewMode();
 	}
 	
@@ -24438,6 +24761,15 @@ var CONFIG =
 			setGameViewMode();
 		else if($("#home:visible").size()>0)
 			setHomeViewMode();
+	}
+	function doWorkerThread(thread,timeout){
+	//console.log(CONFIG.webWorkers);
+		if(timeout==null)
+			timeout = CONFIG.processDelay;
+		if(timeout===0)
+			return thread.call();
+		else
+			return setTimeout(thread,timeout);
 	}
 	function showPageLoadingMsg($page)
 	{
@@ -24478,6 +24810,13 @@ var CONFIG =
 		else
 			result = Math.round(num*Math.pow(10,dec))/Math.pow(10,dec);
 		return result;
+	}
+	
+	function newGuid(){  // from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
+		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+			var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+			return v.toString(16);
+		});
 	}
 	
 	// Array Remove - By John Resig (MIT Licensed)

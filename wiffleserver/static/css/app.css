@@ -16,8 +16,9 @@
 .row {padding:15px 0px;}
 h1 {vertical-align:middle;}
 h1 img {vertical-align:middle;}
-#featuresTab ul {list-style:disc;margin-left:20px;}
-#featuresTab ul  li{padding:0;}
+h3 {font-size:1.1em;}
+#featuresTab ul , #updatesTab ul{list-style:disc;margin-left:20px;}
+#featuresTab ul  li, #updatesTab ul  li{padding:0;}
 
 
 /* -----------------------------------------

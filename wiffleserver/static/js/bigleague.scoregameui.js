@@ -48,7 +48,7 @@
 					}
 					
 					
-					processultimeout = setTimeout(function(){
+					processultimeout = doWorkerThread(function(){
 						pitchulprocessing = true;
 						processultimeout = null;
 						
@@ -63,7 +63,7 @@
 							clearTimeout(clrultimeout);
 							clrultimeout = null;
 						}
-						clrultimeout = setTimeout(function(){	
+						clrultimeout = doWorkerThread(function(){	
 							clrultimeout = null;	
 								
 							$this.removeClass("ui-btn-active");
@@ -71,7 +71,7 @@
 							pitchulprocessing = false;
 						},CONFIG.clearDelay);
 						pitchulprocessing = true;
-					},CONFIG.processDelay);
+					});
 					
 					
 				
@@ -80,7 +80,7 @@
 			var pitchulprocessing2=false;
 			var processultimeout2=null;
 			var clrultimeout2=null;
-			$("ul:not(.inplay) li a[data-pitch]").live(CONFIG.clickEvent,function () {
+			$("ul:not(.inplay) li a[data-pitch]").bind(CONFIG.clickEvent,function () {
 				
 				if(!pitchulprocessing2) // make sure we don't allow double processing/clicks
 				{
@@ -104,7 +104,7 @@
 						processPitch($this.attr("data-pitch"), $this.attr("data-fielded-by"));
 					}
 					
-					processultimeout2 = setTimeout(function(){
+					processultimeout2 = doWorkerThread(function(){
 						pitchulprocessing2 = true;
 						processultimeout2 = null;
 						
@@ -119,7 +119,7 @@
 							clearTimeout(clrultimeout2);
 							clrultimeout2 = null;
 						}
-						clrultimeout2 = setTimeout(function(){	
+						clrultimeout2 = doWorkerThread(function(){	
 							clrultimeout2 = null;	
 								
 							$this.removeClass("ui-btn-active");
@@ -127,7 +127,7 @@
 							pitchulprocessing2 = false;
 						},CONFIG.clearDelay);
 						pitchulprocessing2 = true;
-					},CONFIG.processDelay);
+					});
 					
 				
 				}
@@ -152,7 +152,7 @@
 						clrbtntimeout = null;
 					}
 					pitchbtnprocessing = true;
-					processtimeout = setTimeout(function(){ //processPitch "threaded" for ui responsiveness
+					processtimeout = doWorkerThread(function(){ //processPitch "threaded" for ui responsiveness
 						pitchbtnprocessing = true;
 						processtimeout = null;
 					
@@ -164,7 +164,7 @@
 							clearTimeout(clrbtntimeout);
 							clrbtntimeout = null;
 						}
-						clrbtntimeout = setTimeout(function(){	
+						clrbtntimeout = doWorkerThread(function(){	
 							clrbtntimeout = null;	
 								
 							$this.removeClass("ui-btn-active");
@@ -173,7 +173,7 @@
 						},CONFIG.clearDelay);
 						pitchbtnprocessing = true;
 						
-					},CONFIG.processDelay);
+					});
 				}
 			});
 			
@@ -186,7 +186,7 @@
 					$this.addClass(".ui-btn-active");
 					
 				undo();
-				setTimeout(function(){
+				doWorkerThread(function(){
 					var $li = $this.parents("li:first").removeClass("ui-btn-active");
 				},CONFIG.clearDelay);
 			});
@@ -201,28 +201,28 @@
 					var ab = getCurrentAtBat();
 					var lastab = hi.atbats[hi.atbats.length-2];
 					
-					
 					for(var i=0; i<lastab.runnersScored.length; i++)
 					{
-						$("#runnersscored").append("<li class='runner' data-scored='true' data-scorerindex='"+i+"'>"+lastab.runnersScored[i].name+"</li>");
+						$("#runnersscored").append("<li class='runner' data-scored='true' data-scorerindex='"+i+"'>"+lastab.runnersScored[i].name+HANDLE_HTML+"</li>");
 					}
 					for(var i=0; i<ab.bases.length; i++)
 					{
 						if(ab.bases[i].player!=null)
 						{
-							$("#runner_"+(i+1)).append("<li class='runner' data-base='"+i+"'>"+ab.bases[i].player.name+"</li>");
+							$("#runner_"+(i+1)).append("<li class='runner' data-base='"+i+"'>"+ab.bases[i].player.name+HANDLE_HTML+"</li>");
 						}
 					}
 					for(var i=0; i<lastab.runnersOut.length; i++)
 					{
-						$("#runnersout").append("<li class='runner' data-out='true' data-outindex='"+i+"'>"+lastab.runnersOut[i].name+"</li>");
+						$("#runnersout").append("<li class='runner' data-out='true' data-outindex='"+i+"'>"+lastab.runnersOut[i].name+HANDLE_HTML+"</li>");
 					}
 					
 					$(".baserunner li.runner").draggable({
-						revert:true,
+						revert:'invalid',
 						axis: "y",
 						opacity: .7,
-						cursorAt: { left: 0, top:0 }
+						cursorAt: { left: 0, top:0 },
+						handle: ".handle"
 					});
 					
 					if($(".baserunner").attr("data-inited")!=="true")
@@ -238,6 +238,7 @@
 							hoverClass: "baserunner-hover",
 							drop: function( event, ui ) {  
 								$(this).prepend(ui.draggable);
+								ui.draggable.css("top","0px");
 							}
 								
 						});
@@ -247,6 +248,7 @@
 					if($("#saverunners").attr("data-inited")!=="true")
 					{
 						$("#saverunners").bind(CONFIG.clickEvent,function(){
+							  var bases = newBaseArray();
 							  $("ul:not(#runnersOut) li.runner,ul#runnersOut li.runner").each(function(){  // do 'runners out' last to prevent accidental skip to next inning
 								var $r = $(this);
 								var $p = $r.parent();
@@ -257,11 +259,7 @@
 										if($r.attr("data-base")!=null)
 										{
 											//remove from base
-											if(ab.bases[parseInt($r.attr("data-base"))].player.name==$r.text())
-											{
-												lastab.runnersOut[lastab.runnersOut.length] = ab.bases[parseInt($r.attr("data-base"))].player;
-												ab.bases[parseInt($r.attr("data-base"))].player=null;
-											}
+											lastab.runnersOut[lastab.runnersOut.length] = ab.bases[parseInt($r.attr("data-base"))].player;
 										}
 										if($r.attr("data-scored")==="true")
 										{
@@ -269,13 +267,13 @@
 											lastab.runsScored--;
 											var index = parseInt($r.attr("data-scorerindex"));
 											lastab.runnersOut[lastab.runnersOut.length] = lastab.runnersScored[index];
-											lastab.runnersScored.remove(index,index+1);
+											lastab.runnersScored.remove(index);
 										}
 										//new out
-										runnerOut();
+										hi.currentouts++;
 									}
 								}
-								else if($p.attr("id")=="runnersscored")
+								else if($p.attr("id")==="runnersscored")
 								{
 									if($r.attr("data-scored")!=="true")
 									{
@@ -284,7 +282,6 @@
 										if($r.attr("data-base")!=null)
 										{
 											lastab.runnersScored[lastab.runnersScored.length] = ab.bases[parseInt($r.attr("data-base"))].player;
-											ab.bases[parseInt($r.attr("data-base"))].player=null;
 										}
 										if($r.attr("data-out")==="true")
 										{
@@ -292,42 +289,60 @@
 											hi.currentouts--;
 											var index = parseInt($r.attr("data-outindex"));
 											lastab.runnersScored[lastab.runnersScored.length] = lastab.runnersOut[index];
-											lastab.runnersOut.remove(index,index+1);
+											lastab.runnersOut.remove(index);
 										}
 									}
 								}
 								else
 								{
 									
-										if($r.attr("data-base")!=null && $r.attr("data-base")!=$p.attr("data-base"))
+										if($r.attr("data-base")!=null)
 										{
 											//change base
-											ab.bases[parseInt($p.attr("data-base"))].player=ab.bases[parseInt($r.attr("data-base"))].player;
-											ab.bases[parseInt($r.attr("data-base"))].player=null;
+											bases[parseInt($p.attr("data-base"))].player=ab.bases[parseInt($r.attr("data-base"))].player;
 										}
 										if($r.attr("data-out")==="true")
 										{
 											//remove out
 											hi.currentouts--;
 											var index = parseInt($r.attr("data-outindex"));
-											ab.bases[parseInt($p.attr("data-base"))].player = lastab.runnersOut[index];
-											lastab.runnersOut.remove(index,index+1);
+											bases[parseInt($p.attr("data-base"))].player = lastab.runnersOut[index];
+											lastab.runnersOut.remove(index);
 										}
 										if($r.attr("data-scored")==="true")
 										{
 											//remove score
 											lastab.runsScored--;
 											var index = parseInt($r.attr("data-scorerindex"));
-											ab.bases[parseInt($p.attr("data-base"))].player = lastab.runnersScored[index];
-											lastab.runnersScored.remove(index,index+1);
+											bases[parseInt($p.attr("data-base"))].player = lastab.runnersScored[index];
+											lastab.runnersScored.remove(index);
 										}
 									
 								}
 							  });
+							  ab.bases = bases;
 							  hi.atbats[hi.atbats.length-1] = ab;
 							  hi.atbats[hi.atbats.length-2] = lastab;
-							  currentGame.halfinnings[currentGame.halfinnings.length-1] = hi;
-							  $('.ui-dialog').dialog('close');
+							  
+							if(hi.currentouts>=CONFIG.outsPerInning)
+							{
+								// remove at bat for at the plate
+								getCurrentTeamBatting().currentbatter = (getCurrentTeamBatting().currentbatter-1+getCurrentTeamBatting().players.length) 
+									% getCurrentTeamBatting().players.length; // adding the length to ensure it's positive, then doing the modulus to fit it in range
+								hi.atbats.remove(hi.atbats.length-1);
+								
+							}
+							  
+							currentGame.halfinnings[currentGame.halfinnings.length-1] = hi;
+							  
+							saveGame(currentGame);
+							
+							if(hi.currentouts>=CONFIG.outsPerInning)
+							{
+								nextAtBat();
+							}
+							
+							$('.ui-dialog').dialog('close');
 						});
 						$("#saverunners").attr("data-inited","true");
 					}
@@ -363,7 +378,7 @@
 					$("#setrunsscoredandskip").attr("data-inited","true");
 				}
 				
-				//setTimeout(function(){
+				//doWorkerThread(function(){
 				//	var $li = $this.parents("li:first").removeClass("ui-btn-active");
 				//},CONFIG.clearDelay);
 			});
@@ -383,7 +398,7 @@
 				if(!$this.hasClass(".ui-btn-active"))
 					$this.addClass(".ui-btn-active");
 				redo();
-				setTimeout(function(){
+				doWorkerThread(function(){
 					
 					$this.parents("li:first").removeClass("ui-btn-active");
 				},CONFIG.clearDelay);
@@ -443,14 +458,14 @@
 					atbat.pitcherIndex = newpitcherindex;
 					atbat.pitcher = getCurrentTeamFielding().players[newpitcherindex];
 					
-					saveGames(games);
+					saveGame(currentGameIndex);
 					bindGame();
 					$('.ui-dialog').dialog('close');
 				});
 				
 				
 				
-				setTimeout(function(){
+				doWorkerThread(function(){
 					
 					var $li = $this.removeClass("ui-btn-active");
 				},CONFIG.clearDelay);
@@ -509,14 +524,14 @@
 					atbat.batter = getCurrentTeamBatting().players[newbatterindex];
 					
 					
-					saveGames(games);
+					saveGame(currentGameIndex);
 					bindGame();
 					$('.ui-dialog').dialog('close');
 				});
 
 				$("#changebatter").find(".ui-header").removeClass("ui-corner-top");
 				
-				setTimeout(function(){
+				doWorkerThread(function(){
 					
 					$this.parents("li:first").removeClass("ui-btn-active");
 				},CONFIG.clearDelay);
@@ -537,13 +552,13 @@
 					$("#setseason").find(".ui-header").removeClass("ui-corner-top");
 					$("#saveseason").bind(CONFIG.clickEvent,function(){
 						  currentGame.season = $('#seasonName').val();
-						  saveGames(games);
+						  saveGame(currentGameIndex);
 						  $("#server").hide();
 						  $('.ui-dialog').dialog('close');
 					});
 					
 				}
-					setTimeout(function(){
+					doWorkerThread(function(){
 						
 						var $li = $this.parents("li:first").removeClass("ui-btn-active");
 					},CONFIG.clearDelay);
@@ -554,7 +569,7 @@
 					$this.parent().addClass(".ui-btn-active");
 					
 				output();
-				setTimeout(function(){
+				doWorkerThread(function(){
 					
 					var $li = $this.parents("li:first").removeClass("ui-btn-active");
 				},CONFIG.clearDelay);
@@ -593,9 +608,11 @@
 		}
 		var $basePath = $("#basePath");
 		
-		if($basePath[0].getContext)
+		if(CANVAS)
 		{
+			$basePath.find("div").hide();
 			drawBases($basePath);
+			$("#basePath_n").find("div").hide();
 			drawBases($("#basePath_n"));
 		}
 		
@@ -667,13 +684,23 @@
 		}
 	}
 	
-	
+	function showEnabledOptions()
+	{
+		// for some reason the delay matters on iOS - before this it was leaving valid lis hidden.
+		doWorkerThread(
+			function(){
+				$("li:has([data-pitch])").show();
+				$("li:has([data-fielded-by-template]),li[data-teamoff],li[data-disabled],li[data-situationoff]").hide();
+			}
+		);		
+		
+	}
 	function bindGame()
 	{
 		"use strict";
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindGame,100);
+			doWorkerThread(bindGame,100);
 			return;
 		}
 		if(currentGame==null)
@@ -725,18 +752,16 @@
 		
 		if(atbat.bases==null)
 		{
-			atbat.bases=[];
-			for(var i=0;i<4; i++)
-			{
-				atbat.bases[i] = new Base();
-				atbat.bases[i].number = i+1;
-			}
+			atbat.bases=newBaseArray();
 		}
+		
 		var $basePath = $("#basePath");
 		
-		if($basePath[0].getContext)
+		if(CANVAS)
 		{
+			$basePath.find("div").hide();
 			drawBases($basePath,atbat.bases);
+			$("#basePath_n").find("div").hide();
 			drawBases($("#basePath_n"),atbat.bases);
 		}
 		else
@@ -767,15 +792,24 @@
 			$("#redoli").show();
 		
 		if((!CONFIG.doublePlayRunnersRequired || atbat.bases[0].player!=null) && halfinning.currentouts<CONFIG.outsPerInning-1)
-			$(".dp:not([data-disabled])").show();
+			$(".dp").removeAttr("data-situationoff");
 		else
-			$(".dp:not([data-disabled])").hide();
+			$(".dp").attr("data-situationoff","");
+		
+		if(atbat.bases[0].player!=null || atbat.bases[1].player!=null || atbat.bases[2].player!=null) //someone on base, can have fc
+			$(".fc").removeAttr("data-situationoff");
+		else
+			$(".fc").attr("data-situationoff","");
 			
 		
-		if((atbat.bases[0].player!=null || atbat.bases[1].player!=null || atbat.bases[2].player!=null) && halfinning.currentouts<2)
-			$(".sac:not([data-disabled])").show();
+		if((atbat.bases[0].player!=null || atbat.bases[1].player!=null || atbat.bases[2].player!=null) && halfinning.currentouts<2) //someone on base, less than 2 outs,  can have sac
+			$(".sac").removeAttr("data-situationoff");
 		else
-			$(".sac:not([data-disabled])").hide();
+			$(".sac").attr("data-situationoff","");
+		
+		
+		showEnabledOptions();
+		
 		
 		if((currentGame.season && currentGame.season.length>0) || !window.navigator.onLine || !CONFIG.connectToServer)
 			$("#server").hide();	
@@ -799,9 +833,89 @@
 			$("#gameover").hide();
 		}
 		*/
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
+	}
+	
+	
+	function getRunners($bases,basePathCw,basePathCh) {
+		$bases.find("canvas").remove();
+		
+		var minSide = Math.min(basePathCw, basePathCh);
+		
+		if(minSide===basePathCw)
+			$bases.css("min-width",basePathCw);
+		else
+			$bases.css("min-width","");
+			
+		if(minSide===basePathCh)
+			$bases.css("min-height",basePathCh);
+		else
+			$bases.css("min-height","");
+			
+		var diamondsize = minSide*(.7);
+		var basesize = diamondsize/4.0;
+		var pathLength = diamondsize-basesize;
+		
+		function getRotatedCanvas() {
+			
+			var canvas = document.createElement("canvas");
+			var context = canvas.getContext("2d");
+			
+			canvas.width = basePathCw;
+			canvas.height = basePathCh;
+			
+			context.lineWidth = 1;
+			context.strokeStyle = "#947333";
+			context.fillStyle = "#D6522C";//"#5E87B0";
+			var translateX = (basePathCw-diamondsize)/2.0;
+			var translateY = (basePathCh-diamondsize)/2.0;
+			var tranCenterX = basePathCw/2.0;
+			var tranCenterY = basePathCh/2.0;
+
+			
+			// need to do rotation  with upperleft at center of canvas and then go back
+			// http://stackoverflow.com/questions/9402631/opengl-translate-down-on-y-and-rotate-on-z-around-element-center-on-android
+			
+			context.translate(tranCenterX ,tranCenterY);
+			context.rotate(45.0*Math.PI/180.0);
+			context.translate(-tranCenterX ,-tranCenterY);
+			
+			context.translate(translateX,translateY);
+			
+			return canvas;
+		}
+		function getRunner(x, y) {
+			
+			var canvas = getRotatedCanvas();
+			var context = canvas.getContext("2d");
+			context.fillRect(x,y,basesize,basesize);
+
+			return canvas;        
+		}
+		function getPaths() {
+			
+			var canvas = getRotatedCanvas();
+			var context = canvas.getContext("2d");
+			context.strokeStyle = "#947333";
+			context.fillStyle = "#D6522C";//"#5E87B0";
+			context.strokeRect(0,0,diamondsize,diamondsize);
+			context.strokeRect(pathLength, 0, basesize, basesize);
+			context.strokeRect(0, 0, basesize, basesize);
+			context.strokeRect(0, pathLength, basesize, basesize);
+			context.strokeRect(pathLength, pathLength, basesize, basesize);
+			
+			return canvas;
+		}
+		$bases.append(getPaths())
+		var canvases = [
+			getRunner(pathLength, 0), getRunner(0, 0),
+			getRunner(0, pathLength)
+		];
+		
+		$bases.append(canvases);
+		return canvases;
 	}
 	
 	var draw_current_bases=null;
@@ -813,63 +927,30 @@
 		else
 			draw_current_bases = bases;
 		
+		var redraw = $canvas.is(":visible") && ($canvas.attr("data-width")!=$canvas.width() || $canvas.attr("data-height")!=$canvas.height());
+		
+		
 		if(bases==null)
 			return;
-			
-		$canvas.attr("width",1)
-			.attr("height",1);
-			
-		var basePathCw = $canvas.parent().width();
-		var basePathCh  = $canvas.parent().parent().height()-4;
-		var minSide = Math.min(basePathCw, basePathCh);
-		if(minSide>0)
+		if(redraw)
 		{
-			var diamondsize = minSide*(.7);
-			var basesize = diamondsize/4.0;
+			$canvas.css("min-width","").css("min-height","");
+			var basePathCw = $canvas.parent().width();
+			var basePathCh  = $canvas.parent().parent().height();
 			
-			$canvas.attr("width",basePathCw)
-				.attr("height",basePathCh);
-			var basePathC = $canvas[0].getContext('2d');
-			
-			basePathC.strokeStyle = "#947333";
-			basePathC.fillStyle = "#D6522C";//"#5E87B0";
-			var translateX = (basePathCw-diamondsize)/2.0;
-			var translateY = (basePathCh-diamondsize)/2.0;
-			
-			var tranCenterX = basePathCw/2.0;
-			var tranCenterY = basePathCh/2.0;
-			
-			// draw a set of rotated squares, shifted to center of canvas
-			
-			// need to do rotation  with upperleft at center of canvas and then go back
-			// http://stackoverflow.com/questions/9402631/opengl-translate-down-on-y-and-rotate-on-z-around-element-center-on-android
-			basePathC.translate(tranCenterX ,tranCenterY);
-			basePathC.rotate(45.0*Math.PI/180.0);
-			basePathC.translate(-tranCenterX ,-tranCenterY);
-			
-			// move it to to center point
-			basePathC.translate(translateX,translateY);
-			
-			//diamond
-			basePathC.strokeRect(0,0,diamondsize,diamondsize);
-			
-			//first base	
-			basePathC.strokeRect(diamondsize-basesize,0,basesize,basesize);
-			if(bases[0].player!=null)
-				basePathC.fillRect(diamondsize-basesize,0,basesize,basesize);
+			if(basePathCh>$canvas.parent().prev().height()) //fix for spacer in narrow area
+				basePathCh-=$canvas.parent().prev().height();
 				
-			//second base
-			basePathC.strokeRect(0,0,basesize,basesize);
-			if(bases[1].player!=null)
-				basePathC.fillRect(0,0,basesize,basesize);
+			getRunners($canvas, basePathCw, basePathCh);
 			
-			// third base	
-			basePathC.strokeRect(0,diamondsize-basesize,basesize,basesize);
-			if(bases[2].player!=null)
-				basePathC.fillRect(0,diamondsize-basesize,basesize,basesize);
-				
-			//home
-			basePathC.strokeRect(diamondsize-basesize,diamondsize-basesize,basesize,basesize);
+			$canvas.attr("data-width",$canvas.width()).attr("data-height",$canvas.height());
+		}
+		for(var i=0;i<bases.length;i++)
+		{
+			if(bases[i]!=null && bases[i].player!=null)
+				$canvas.find("canvas:eq("+(i+1)+")").show();
+			else
+				$canvas.find("canvas:eq("+(i+1)+")").hide();
 		}
 	}
 	
@@ -879,76 +960,79 @@
 		"use strict";
 		if(!CONFIG.doublePlayOnFly)
 		{
-			$(".fly .dp").hide().attr("data-disabled","");
+			$(".fly .dp").attr("data-disabled","");
 		}
 		else
 		{
-			$(".fly .dp").show().removeAttr("data-disabled");
+			$(".fly .dp").removeAttr("data-disabled");
 		}
 		if(!CONFIG.doublePlayOnLine)
 		{
-			$(".linedrive .dp").hide().attr("data-disabled","");
+			$(".linedrive .dp").attr("data-disabled","");
 		}
 		else
 		{
-			$(".linedrive .dp").show().removeAttr("data-disabled");
+			$(".linedrive .dp").removeAttr("data-disabled");
 		}
 		if(!CONFIG.ceilingOuts)
 		{
-			$(".ceiling").hide().attr("data-disabled","");
+			$(".ceiling").attr("data-disabled","");
 		}
 		else
 		{
-			$(".ceiling").show().removeAttr("data-disabled");
+			$(".ceiling").removeAttr("data-disabled");
 		}
 		if(!CONFIG.flySingles)
 		{
-			$(".fly .single").hide().attr("data-disabled","");
+			$(".fly .single").attr("data-disabled","");
 		}
 		else
 		{
-			$(".fly .single").show().removeAttr("data-disabled","");
+			$(".fly .single").removeAttr("data-disabled","");
 		}
 		if(!CONFIG.lineSingles)
 		{
-			$(".linedrive .single").hide().attr("data-disabled","");
+			$(".linedrive .single").attr("data-disabled","");
 		}
 		else
 		{
-			$(".linedrive .single").show().removeAttr("data-disabled");
+			$(".linedrive .single").removeAttr("data-disabled");
 		}
 		if(CONFIG.doublePlayAdvanceOnFailed<=0)
 		{
-			$(".faileddp").hide().attr("data-disabled","");
+			$(".faileddp").attr("data-disabled","");
 		}
 		else
 		{
-			$(".faileddp").show().removeAttr("data-disabled");
+			$(".faileddp").removeAttr("data-disabled");
 		}
 		if(!CONFIG.overSpeedWalk)
 		{
-			$(".overspeed").hide().attr("data-disabled","");
+			$(".overspeed").attr("data-disabled","");
 		}
 		else
 		{
-			$(".overspeed").show().removeAttr("data-disabled");
+			$(".overspeed").removeAttr("data-disabled");
 		}
 		if(!CONFIG.halfInningSkip)
 		{
-			$(".halfInningSkip").hide().attr("data-disabled","");
+			$(".halfInningSkip").attr("data-disabled","");
 		}
 		else
 		{
-			$(".halfInningSkip").show().removeAttr("data-disabled");
+			$(".halfInningSkip").removeAttr("data-disabled");
 		}
 		if(!CONFIG.sacFlys)
 		{
-			$(".sac").hide().attr("data-disabled","");
+			$(".sac").attr("data-disabled","");
 		}
 		else
 		{
-			$(".sac").show().removeAttr("data-disabled");
+			$(".sac").removeAttr("data-disabled");
 		}
+		
+		
+		showEnabledOptions();
 		
 		try
 		{ // might not be previously init'd
@@ -957,8 +1041,23 @@
 		catch(exc){
 		}
 	}
+	function resetFielders()
+	{
+		$("li:has(a[data-fielded-by])").remove();
+		
+		var batting = getCurrentTeamBatting();
+		for(var i=0; i<batting.players.length; i++)
+			batting.players[i].addedToField=false;
+		setupFielders(batting);
+		
+		var fielding = getCurrentTeamFielding();
+		for(var i=0; i<fielding.players.length; i++)
+			fielding.players[i].addedToField=false;
+		setupFielders(fielding);
+	}
+	
 	var setupFieldersRunning=false;
-	function setupFielders()
+	function setupFielders(forteam)
 	{
 		"use strict";
 		
@@ -971,7 +1070,7 @@
 			$("#game ul.inplay").listview("refresh");
 		}
 		catch(exc){
-			setTimeout(setupFielders,100);
+			doWorkerThread(setupFielders,100);
 			return;
 		}
 		if(!setupFieldersRunning)
@@ -979,46 +1078,35 @@
 			setupFieldersRunning=true;
 			var fielded = $("li:has(a[data-fielded-by-template])");
 			fielded.show();
-			//fielded.find("a[data-fielded-by]").attr("data-fielded-by","");
-			//fielded.find("span.fieldedby").remove();
-			/*
-			for(var i=fielded.length; i>=0; i--) // clear previous fielders
-			{
-				var pitch = fielded.eq(i).find("a[data-fielded-by]").attr("data-pitch");
-				
-				if(pitch)
-				{
-					var els = fielded.filter(":has([data-pitch="+pitch+"])").slice(1);
-					i-=els.length;
-					els.remove();
-					fielded = $("li:has(a[data-fielded-by])");
-				}
-			}
-			*/
-			//return;
+			
 			var changemade=false;
-			var teamfielding = getCurrentTeamFielding();
-			for(var i=0; i<fielded.length; i++) // dupe fielding items for each fielder
+			
+			if(forteam==null)
+				forteam = getCurrentTeamFielding();
+			for(var j=forteam.players.length-1; j>=0; j--)
 			{
-				var item = fielded.eq(i);
-				for(var j=0; j<teamfielding.players.length; j++)
+				if(forteam.players[j].addedToField!==true)
 				{
-					if(item.parent().find("[data-fielded-id='"+item.find("a[data-pitch]").attr("data-pitch")+"-"+teamfielding.players[j].name+"-"+teamfielding.name+"']").size()==0)
+					for(var i=0; i<fielded.length; i++) // dupe fielding items for each fielder
 					{
+						var item = fielded.eq(i);
+						
 						var newi = item.clone();
-						newi.find("a[data-fielded-by-template]").attr("data-fielded-by",teamfielding.players[j].name)
-							.attr("data-fielded-by-team",teamfielding.name)
-							.attr("data-fielded-id",item.find("a[data-pitch]").attr("data-pitch")+"-"+teamfielding.players[j].name+"-"+teamfielding.name)
-							.append("<span class='fieldedby'> By "+teamfielding.players[j].name+"</span>").removeAttr("data-fielded-by-template");
+						newi.find("a[data-fielded-by-template]").attr("data-fielded-by",forteam.players[j].name)
+							.attr("data-fielded-by-team",forteam.name)
+							.append("<span class='fieldedby'> By "+forteam.players[j].name+"</span>").removeAttr("data-fielded-by-template");
 						
 						item.after(newi);
-						changemade=true;
 					}
+					changemade=true;
+					forteam.players[j].addedToField = true;
 				}
 			}
+			$("li:has(a[data-fielded-by-team='"+getCurrentTeamFielding().name+"'])").removeAttr("data-teamoff");
+			$("li:has(a[data-fielded-by-team='"+getCurrentTeamBatting().name+"'])").attr("data-teamoff","");
 			
-			$("li:has(a[data-fielded-by-team='"+teamfielding.name+"'])").show();
-			$("li:has(a[data-fielded-by-team='"+getCurrentTeamBatting().name+"'])").hide();
+			showEnabledOptions();
+		
 			fielded.hide();
 			if(changemade)
 				$("#game ul.inplay").listview("refresh");

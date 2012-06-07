@@ -8,7 +8,7 @@
 			return;
 		if(!savedgamesloaded)
 		{
-			setTimeout(bindGames,100);
+			doWorkerThread(bindGames,100);
 			
 			return;
 		}
@@ -99,6 +99,7 @@
 					redos = [];
 					undos[0] = JSON.stringify(currentGame);
 					
+					resetFielders();
 					
 					if($(this).is("[data-recreate=true]"))
 					{
@@ -123,7 +124,7 @@
 						redos = [];
 						undos[0] = JSON.stringify(currentGame);
 						recreateGame();
-						saveGames(games);
+						saveGame(currentGameIndex);
 
 						$.mobile.changePage($(this).find("a").attr("href"),
 							{
@@ -199,7 +200,7 @@
 		}
 		$("ul li.ui-btn-active").removeClass("ui-btn-active");
 			isloading=false;
-		setTimeout(function(){	
+		doWorkerThread(function(){	
 			hidePageLoadingMsg();
 		},CONFIG.clearDelay);
 		
@@ -216,17 +217,57 @@
 		}
 	}
 	
-	
+	function updateGameStorage()
+	{
+		"use strict";
+		if(localStorage["games"]!=null && localStorage["games"]!="null")   // update to new individual game storage method
+		{
+			var allgames = JSON.parse(localStorage["games"],gameReviver);
+			var gameids = [];
+			for(var i=0; i<allgames.length; i++)
+			{
+				localStorage["game_"+allgames[i].guid] = JSON.stringify(allgames[i]);
+				gameids[gameids.length] = allgames[i].guid;
+			}
+			localStorage["gameids"] = JSON.stringify(gameids);
+			localStorage["games"] = null;
+		}
+	}
+	function getGame(index)
+	{
+		"use strict";
+		updateGameStorage();
+		
+		var gameids = getGameIds();
+		
+		return JSON.parse(localStorage["game_"+gameids[index]], gameReviver);
+	}
+	function getGameIds()
+	{
+		if(localStorage["gameids"]==null)
+			return [];
+		
+		return JSON.parse(localStorage["gameids"]);
+	}
 	function getGames()
 	{
 		"use strict";
-		if(localStorage["games"]==null)
-			return [];
-		return JSON.parse(localStorage["games"],gameReviver);
+		
+		updateGameStorage();
+		
+		var gameids = getGameIds();
+		
+		var games = [];
+		
+		for(var i=0; i<gameids.length; i++)
+			games[games.length] = getGame(i);
+			
+		return games;
     }
 	var savedgamesloaded=true;
     function getSavedGames() {
 		"use strict";
+		
 		if(CONFIG.connectToServer && window.navigator.onLine)
 		{
 			savedgamesloaded=false;
@@ -235,7 +276,7 @@
 				savedGames = JSON.parse(JSON.stringify(data),gameReviver);
 				//console.log(savedGames);
 				savedgamesloaded=true;
-				setTimeout(function(){	
+				doWorkerThread(function(){	
 					hidePageLoadingMsg();
 				},CONFIG.clearDelay);
 			})
@@ -244,18 +285,44 @@
 				//console.log("incoming Text " + jqXHR.responseText);
 				savedGames = [];
 				savedgamesloaded=true;
-				setTimeout(function(){	
+				doWorkerThread(function(){	
 					hidePageLoadingMsg();
 				},CONFIG.clearDelay);
 			})
 			;
 		}
     }
+	function saveGame(index, saveundo)
+	{
+		"use strict";
+		
+		if(saveundo==null)
+			saveundo = true;
+		
+		if(savedgamesloaded)
+			post();
+			
+		var curGame = JSON.stringify(currentGame);
+		
+		if(saveundo)
+			undos[undos.length] = curGame;		
+		
+		var gameids = getGameIds();
+		
+		if(gameids.length>index)
+			localStorage["game_"+gameids[index]]=curGame;
+	}
 	function saveGames(games)
 	{
 		"use strict";
-		if(savedgamesloaded)
-			post();
-		undos[undos.length] = JSON.stringify(currentGame);
-		localStorage["games"] = JSON.stringify(games);
+		
+		saveGame(currentGameIndex);
+		
+		var gameids = [];
+		for(var i=0; i<games.length; i++)
+		{
+			gameids[gameids.length] = games[i].guid;
+			localStorage["game_"+games[i].guid] = JSON.stringify(games[i]);
+		}
+		localStorage["gameids"] = JSON.stringify(gameids);
 	}
